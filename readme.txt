@@ -5,9 +5,11 @@ Requires at least: 3.3
 Tested up to: 3.5
 Stable Tag: 1.0
 
-Take back control over the content you are creating on other social websites.
+Take back control of the content you are creating on other social websites.
 
 == Description ==
+
+**Please [read about each importer](http://wordpress.org/extend/plugins/keyring-social-importers/other_notes/) before running this plugin**
 
 **NOTE: This is "pre-release" software! It's likely to miss importing some content, import it in a format you don't like, or something else. You should run it on a test WordPress install to see how it works before running it anywhere near a live site!**
 
