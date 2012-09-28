@@ -57,7 +57,6 @@ You can potentially write your own importers as well, using the base class inclu
 * Tags used on Flickr are used on WordPress
 * If available, geo data is downloaded and stored per the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata)
 * flickr_id and the full URL to the photo page are stored as custom fields
-* **Auto-import is currently broken!**
 
 = Foursquare =
 * Imports each check-in on [Foursquare](http://foursquare.com/) as a separate Post
@@ -69,7 +68,6 @@ You can potentially write your own importers as well, using the base class inclu
 * For every photo, a Post is created and published, containing that one image (and it is attached within WordPress)
 * Posts are marked with the 'image' Post Format
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url
-* **Auto-import is currently broken!**
 
 = Twitter =
 * Every [tweet](http://twitter.com/) will be downloaded as an individual Post
