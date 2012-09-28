@@ -71,9 +71,8 @@ abstract class Keyring_Importer_Base {
 		$this->options = get_option( 'keyring_' . static::SLUG . '_importer' );
 
 		// Add a Keyring handler to push us to the next step of the importer once connected
-		if ( isset( $_COOKIE[ 'keyring-' . static::SLUG . '-importer' ] ) ) {
+		if ( isset( $_COOKIE[ 'keyring-' . static::SLUG . '-importer' ] ) )
 			add_action( 'keyring_' . static::SLUG . '_created', array( $this, 'verified_connection' ) );
-		}
 
 		// If a request is made for a new connection, pass it off to Keyring
 		if (
@@ -98,7 +97,7 @@ abstract class Keyring_Importer_Base {
 
 		// Make sure we have a scheduled job to handle auto-imports if enabled
 		if ( $this->get_option( 'auto_import' ) && !wp_get_schedule( 'keyring_' . static::SLUG . '_import_auto' ) )
-			wp_schedule_event( current_time( 'timestamp' ), 'hourly', 'keyring_' . static::SLUG . '_import_auto' );
+			wp_schedule_event( time(), 'hourly', 'keyring_' . static::SLUG . '_import_auto' );
 
 		// Form handling here, pre-output (in case we need to redirect etc)
 		$this->handle_request();
@@ -523,6 +522,7 @@ abstract class Keyring_Importer_Base {
 	 * any value returned from it.
 	 */
 	function do_import() {
+		set_time_limit( 0 );
 		$res = $this->import();
 		if ( true !== $res ) {
 			echo '<div class="error"><p>';
@@ -553,7 +553,6 @@ abstract class Keyring_Importer_Base {
 	 * Keeps track of 'state' in the DB.
 	 */
 	function import() {
-		set_time_limit( 0 );
 		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
 		$num = 0;
 		$this->header();
@@ -667,6 +666,7 @@ abstract class Keyring_Importer_Base {
 	 * other methods "discretely" enough, you might not need to override this.
 	 */
 	function do_auto_import() {
+		set_time_limit( 0 );
 		// In case auto-import has been disabled, clear all jobs and bail
 		if ( !$this->get_option( 'auto_import' ) ) {
 			wp_clear_scheduled_hook( 'keyring_' . static::SLUG . '_import_auto' );
@@ -720,6 +720,8 @@ abstract class Keyring_Importer_Base {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		if ( !function_exists( 'download_url' ) )
 			require_once ABSPATH . 'wp-admin/includes/file.php';
+		if ( !function_exists( 'wp_read_image_metadata' ) )
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		$img = media_sideload_image( $url, $post_id, $post['post_title'] );
 		if ( is_string( $img ) ) { // returns an image tag
@@ -731,6 +733,7 @@ abstract class Keyring_Importer_Base {
 					'post_mime_type' => 'image',
 				)
 			);
+
 			if ( $attachments ) {
 				$data = wp_get_attachment_image_src( $attachments[0]->ID, $size );
 				if ( $data ) {

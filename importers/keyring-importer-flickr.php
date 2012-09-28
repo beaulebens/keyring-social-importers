@@ -129,11 +129,12 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			if ( $latest ) {
 				$url = add_query_arg( 'min_upload_date', strtotime( $latest[0]->post_modified_gmt ) + 1, $url );
 			}
+			$url = add_query_arg( 'page', $this->get_option( 'auto_page', 1 ), $url );
 		} else {
 			// Handle page offsets (only for non-auto-import requests)
 			$url = add_query_arg( 'page', $this->get_option( 'page', 0 ), $url );
 		}
-error_log( $url );
+
 		return $url;
 	}
 
@@ -165,7 +166,6 @@ error_log( $url );
 
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata->photos->photo as $post ) {
-error_log( json_encode( $post ) );
 			// Title is easy
 			$post_title = $post->title;
 
@@ -189,7 +189,7 @@ error_log( json_encode( $post ) );
 
 			// Lay out the post content, similar to Instagram importer
 			$post_content = '<p class="flickr-image">';
-			$post_content .= '<a href="' . esc_url( $flickr_url ) . '">';
+			$post_content .= '<a href="' . esc_url( $flickr_url ) . '" class="flickr-link">';
 			$post_content .= '<img src="' . esc_url( $flickr_img ) . '" alt="' . esc_attr( $post_title ) . '" class="flickr-img" />';
 			$post_content .= '</a></p>';
 			if ( !empty( $post->description->_content ) )
@@ -198,7 +198,7 @@ error_log( json_encode( $post ) );
 			// Tags are space-separated on Flickr. Throw any machine tags in with manual ones.
 			$tags         = explode( ' ', $post->tags );
 			$machine_tags = explode( ' ', $post->machine_tags );
-			$tags         = array_merge( $tags, $machine_tags );
+			$tags         = array_filter( array_merge( $tags, $machine_tags ) );
 
 			// Password protect some photos
 			if ( 1 == $post->ispublic ) {
@@ -240,6 +240,10 @@ error_log( json_encode( $post ) );
 				'flickr_raw'
 			);
 		}
+
+		// For auto imports, handle paging
+		if ( $this->auto_import )
+			$this->set_option( 'auto_page', (int) $this->get_option( 'auto_page' ) + 1 );
 	}
 
 	function insert_posts() {
@@ -256,7 +260,6 @@ error_log( json_encode( $post ) );
 				// Looks like a duplicate
 				$skipped++;
 			} else {
-error_log( 'insert post' );
 				$post_id = wp_insert_post( $post );
 
 				if ( is_wp_error( $post_id ) )
@@ -288,7 +291,7 @@ error_log( 'insert post' );
 				}
 
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $flickr_raw ) );
-error_log( 'sideload media' );
+
 				$this->sideload_media( $flickr_img, $post_id, $post, apply_filters( 'keyring_flickr_importer_image_embed_size', 'large' )  );
 
 				$imported++;
@@ -298,6 +301,11 @@ error_log( 'sideload media' );
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
+	}
+
+	function do_auto_import() {
+		$this->set_option( 'auto_page', 1 );
+		parent::do_auto_import();
 	}
 }
 

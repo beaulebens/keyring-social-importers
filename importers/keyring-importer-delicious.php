@@ -108,9 +108,9 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 			// Construct a post body
 			$href         = (string) $post['href'];
 			$extended     = (string) $post['extended'];
-			$post_content = '<a href="' . $href . '">' . $post_title . '</a>';
+			$post_content = '<a href="' . $href . '" class="delicious-title">' . $post_title . '</a>';
 			if ( !empty( $extended ) )
-				$post_content .= "\n<blockquote>" . $extended . '</blockquote>';
+				$post_content .= "\n<blockquote class='delicious-note'>" . $extended . '</blockquote>';
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );

@@ -107,7 +107,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 			// Construct a post body
 			if ( !empty( $post->venue->id ) )
-				$venue_link = '<a href="' . esc_url( 'http://foursquare.com/v/' . $post->venue->id ) . '">' . esc_html( $post->venue->name ) . '</a>';
+				$venue_link = '<a href="' . esc_url( 'http://foursquare.com/v/' . $post->venue->id ) . '" class="foursquare-link">' . esc_html( $post->venue->name ) . '</a>';
 			else
 				$venue_link = $post->venue->name;
 			if ( isset( $post->event ) ) {
@@ -126,7 +126,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			// Include any comment/shout the user made when posting
 			$tags = array();
 			if ( isset( $post->shout ) ) {
-				// Any hashtags used in a tweet will be applied to the Post as tags in WP
+				// Any hashtags used in a note will be applied to the Post as tags in WP
 				if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post->shout, $tag ) )
 					$tags = $tag[2];
 

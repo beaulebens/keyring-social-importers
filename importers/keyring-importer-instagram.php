@@ -114,7 +114,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			// Construct a post body. By default we'll just link to the external image.
 			// In insert_posts() we'll attempt to download/replace that with a local version.
 			$post_content = '<p class="instagram-image">';
-			$post_content .= '<a href="' . esc_url( $post->link ) . '">';
+			$post_content .= '<a href="' . esc_url( $post->link ) . '" class="instagram-link">';
 			$post_content .= '<img src="' . esc_url( $post->images->standard_resolution->url ) . '" width="' . esc_attr( $post->images->standard_resolution->width ) . '" height="' . esc_attr( $post->images->standard_resolution->height ) . '" alt="' . esc_attr( $post_title ) . '" class="instagram-img" />';
 			$post_content .= '</a></p>';
 			if ( !empty( $post->caption ) )
