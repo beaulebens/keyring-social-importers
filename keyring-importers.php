@@ -666,6 +666,7 @@ abstract class Keyring_Importer_Base {
 	 * other methods "discretely" enough, you might not need to override this.
 	 */
 	function do_auto_import() {
+		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
 		set_time_limit( 0 );
 		// In case auto-import has been disabled, clear all jobs and bail
 		if ( !$this->get_option( 'auto_import' ) ) {
@@ -681,7 +682,6 @@ abstract class Keyring_Importer_Base {
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 
 		$this->auto_import = true;
-		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
 
 		$num = 0;
 		while ( !$this->finished && $num < static::REQUESTS_PER_LOAD ) {
