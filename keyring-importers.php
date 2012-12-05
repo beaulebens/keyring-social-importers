@@ -71,8 +71,7 @@ abstract class Keyring_Importer_Base {
 		$this->options = get_option( 'keyring_' . static::SLUG . '_importer' );
 
 		// Add a Keyring handler to push us to the next step of the importer once connected
-		if ( isset( $_COOKIE[ 'keyring-' . static::SLUG . '-importer' ] ) )
-			add_action( 'keyring_' . static::SLUG . '_created', array( $this, 'verified_connection' ) );
+		add_action( 'keyring_connection_verified', array( $this, 'verified_connection' ), 10, 2 );
 
 		// If a request is made for a new connection, pass it off to Keyring
 		if (
@@ -90,7 +89,7 @@ abstract class Keyring_Importer_Base {
 		}
 
 		// If we have a token set already, then load some details for it
-		if ( $this->get_option( 'token' ) && $token = Keyring::get_token_store()->get_token( static::SLUG, $this->get_option( 'token' ) ) ) {
+		if ( $this->get_option( 'token' ) && $token = Keyring::get_token_store()->get_token( array( 'service' => static::SLUG, 'id' => $this->get_option( 'token' ) ) ) ) {
 			$this->service = call_user_func( array( static::KEYRING_SERVICE, 'init' ) );
 			$this->service->set_token( $token );
 		}
@@ -225,7 +224,7 @@ abstract class Keyring_Importer_Base {
 				// Set it internally as our access token and then initiate the Service for it
 				$this->set_option( 'token', (int) $_REQUEST[ static::SLUG . '_token' ] );
 				$this->service = call_user_func( array( static::KEYRING_SERVICE, 'init' ) );
-				$token = Keyring::get_token_store()->get_token( static::SLUG, (int) $_REQUEST[ static::SLUG . '_token' ] );
+				$token = Keyring::get_token_store()->get_token( array( 'service' => static::SLUG, 'id' => (int) $_REQUEST[ static::SLUG . '_token' ] ) );
 				$this->service->set_token( $token );
 			}
 
@@ -366,13 +365,14 @@ abstract class Keyring_Importer_Base {
 	 *
 	 * @param array $request The $_REQUEST made after completing the Keyring connection process
 	 */
-	function verified_connection( $request ) {
-		// Only handle requests that were successful, and for our specific service
-		if ( static::SLUG == $request['service'] && $id = $request['id'] ) {
-			// Remove cookie to avoid crazy loops
-			unset( $_COOKIE[ 'keyring-' . static::SLUG . '-importer' ] );
-			setcookie( 'keyring-' . static::SLUG . '-importer', '', -1 );
+	function verified_connection( $service, $id ) {
+		// Only handle connections that were for us
+		global $keyring_request_token;
+		if ( ! $keyring_request_token || 'keyring-' . static::SLUG . '-importer' != $keyring_request_token->get_meta( 'for' ) )
+			return;
 
+		// Only handle requests that were successful, and for our specific service
+		if ( static::SLUG == $service && $id ) {
 			// Redirect to ::greet() of our importer, which handles keeping track of the token in use, then proceeds
 			wp_safe_redirect(
 				add_query_arg(
@@ -480,7 +480,7 @@ abstract class Keyring_Importer_Base {
 
 			<p class="submit">
 				<input type="submit" name="submit" class="button-primary" id="options-submit" value="<?php _e( 'Import', 'keyring' ); ?>" />
-				<input type="submit" name="reset" value="<?php _e( 'Reset Importer', 'keyring' ); ?>" id="reset" />
+				<input type="submit" name="reset" value="<?php _e( 'Reset Importer', 'keyring' ); ?>" id="reset" class="button" />
 			</p>
 		</form>
 
@@ -764,9 +764,17 @@ function keyring_register_importer( $slug, $class, $plugin, $info = false ) {
 	$_keyring_importers[$slug] = call_user_func( array( $class, 'init' ) );
 	if ( !$info )
 		$info = __( 'Import content from %s and save it as Posts within WordPress.', 'keyring' );
+
+	$name = $class::LABEL;
+
+	// Check if this importer is already configured to auto-import
+	$options = get_option( 'keyring_' . $slug . '_importer' );
+	if ( !empty( $options['auto_import'] ) && !empty( $options['token'] ) )
+		$name = '&#10003; ' . $name;
+
 	register_importer(
 		$slug,
-		$class::LABEL,
+		$name,
 		sprintf(
 			$info,
 			$class::LABEL

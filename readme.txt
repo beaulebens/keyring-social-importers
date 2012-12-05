@@ -78,5 +78,9 @@ You can potentially write your own importers as well, using the base class inclu
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs)
 
 == Changelog ==
+= 1.1 =
+* Updated to work with Keyring 1.2
+
+= 1.0 =
 * Initial check-in without templating engine
 * Auto-import working for all services **except** Flickr, and maybe Instagram
