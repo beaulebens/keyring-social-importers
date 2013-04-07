@@ -21,7 +21,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	function custom_options() {
 		?><tr valign="top">
 			<th scope="row">
-				<label for="include_rts"><?php _e( 'Include retweets', 'keyring' ); ?></label>
+				<label for="include_rts"><?php _e( 'Import retweets', 'keyring' ); ?></label>
 			</th>
 			<td>
 				<input type="checkbox" value="1" name="include_rts" id="include_rts"<?php echo checked( $this->get_option( 'include_rts', true ) ); ?> />
@@ -29,7 +29,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		</tr>
 		<tr valign="top">
 			<th scope="row">
-				<label for="include_replies"><?php _e( 'Include @replies', 'keyring' ); ?></label>
+				<label for="include_replies"><?php _e( 'Import @replies', 'keyring' ); ?></label>
 			</th>
 			<td>
 				<input type="checkbox" value="1" name="include_replies" id="include_replies"<?php echo checked( $this->get_option( 'include_replies', true ) ); ?> />
@@ -66,6 +66,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'        => (int) $_POST['category'],
+				'tags'            => explode( ',', $_POST['tags'] ),
 				'author'          => (int) $_POST['author'],
 				'include_replies' => (bool) $_POST['include_replies'],
 				'include_rts'     => (bool) $_POST['include_rts'],
@@ -180,9 +181,9 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			}
 
 			// Any hashtags used in a tweet will be applied to the Post as tags in WP
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post_content, $tag ) )
-				$tags = $tag[2];
+				$tags = array_merge( $tags, $tag[2] );
 
 			// Add HTML links to URLs, usernames and hashtags
 			$post_content = make_clickable( esc_html( $post_content ) );
