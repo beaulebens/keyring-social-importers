@@ -16,10 +16,10 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
-			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your bookmarks into." ) );
 
 		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
-			$this->error( __( "You must select an author to assign to all checkins." ) );
+			$this->error( __( "You must select an author to assign to all bookmarks." ) );
 
 		if ( isset( $_POST['auto_import'] ) )
 			$_POST['auto_import'] = true;
@@ -32,6 +32,7 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -103,14 +104,14 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 
 			// Figure out tags
 			$tags = (string) $post['tag'];
-			$tags = explode( ' ', strtolower( $tags ) );
+			$tags = array_merge( $this->get_option( 'tags' ), explode( ' ', strtolower( $tags ) ) );
 
 			// Construct a post body
 			$href         = (string) $post['href'];
 			$extended     = (string) $post['extended'];
 			$post_content = '<a href="' . $href . '" class="delicious-title">' . $post_title . '</a>';
 			if ( !empty( $extended ) )
-				$post_content .= "\n<blockquote class='delicious-note'>" . $extended . '</blockquote>';
+				$post_content .= "\n\n<blockquote class='delicious-note'>" . $extended . '</blockquote>';
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );

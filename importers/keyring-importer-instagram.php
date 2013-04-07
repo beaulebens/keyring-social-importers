@@ -33,6 +33,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -130,9 +131,9 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			}
 
 			// Tags
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( !empty( $post->tags ) )
-				$tags = $post->tags;
+				$tags = array_merge( $tags, $post->tags );
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );

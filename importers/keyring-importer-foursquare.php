@@ -32,6 +32,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -124,13 +125,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			}
 
 			// Include any comment/shout the user made when posting
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( isset( $post->shout ) ) {
 				// Any hashtags used in a note will be applied to the Post as tags in WP
 				if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post->shout, $tag ) )
-					$tags = $tag[2];
+					$tags = array_merge( $tags, $tag[2] );
 
-				$post_content .= "\n\n<blockquote>" . $post->shout . "</blockquote>";
+				$post_content .= "\n\n<blockquote class='foursquare-note'>" . $post->shout . "</blockquote>";
 			}
 
 			// Include geo Data

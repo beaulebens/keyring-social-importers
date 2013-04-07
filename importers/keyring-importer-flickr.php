@@ -47,6 +47,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			</th>
 			<td>
 				<input type="text" value="<?php echo esc_attr( $this->get_option( 'post_password', '' ) ); ?>" name="post_password" id="post_password" />
+				<p class="description"><?php _e( 'Any photos not available publicly on Flickr will be added to a password-protected post in WordPress. Leave empty to make them public.', 'keyring' ); ?></p>
 			</td>
 		</tr>
 		<?php
@@ -71,6 +72,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'        => (int) $_POST['category'],
+				'tags'            => explode( ',', $_POST['tags'] ),
 				'author'          => (int) $_POST['author'],
 				'auto_import'     => (bool) $_POST['auto_import'],
 				'post_password'   => (string) $_POST['post_password'],
@@ -196,7 +198,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 				$post_content .= "\n<p class='flickr-caption'>" . $post->description->_content . '</p>';
 
 			// Tags are space-separated on Flickr. Throw any machine tags in with manual ones.
-			$tags         = explode( ' ', $post->tags );
+			$tags         = array_merge( $this->get_option( 'tags' ), explode( ' ', $post->tags ) );
 			$machine_tags = explode( ' ', $post->machine_tags );
 			$tags         = array_filter( array_merge( $tags, $machine_tags ) );
 
