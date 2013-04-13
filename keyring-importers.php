@@ -438,7 +438,7 @@ abstract class Keyring_Importer_Base {
 		if ( $this->get_option( 'auto_import' ) ) :
 			$auto_import_button_label = __( 'Save Changes', 'keyring' );
 			?>
-			<div class="updated">
+			<div class="updated inline">
 				<p><?php _e( "You are currently auto-importing new content using the settings below.", 'keyring' ); ?></p>
 				<p><input type="submit" name="refresh" class="button" id="options-refresh" value="<?php esc_attr_e( 'Check for new content now', 'keyring' ); ?>" /></p>
 			</div><?php
