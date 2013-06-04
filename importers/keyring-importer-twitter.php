@@ -80,7 +80,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 	function build_request_url() {
 		// Base request URL
-		$url = "http://api.twitter.com/1/statuses/user_timeline.json?";
+		$url = "https://api.twitter.com/1.1/statuses/user_timeline.json?";
 		$params = array(
 			'user_id' => $this->get_option( 'user_id' ),
 			'trim_user' => 'true',
