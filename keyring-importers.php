@@ -3,7 +3,7 @@
 Plugin Name: Keyring Social Importers
 Description: Take back your content from different social media websites like Twitter, Flickr, Instagram, Delicious and Foursquare. Store everything in your own WordPress so that you can use it however you like.
 Plugin URL: http://dentedreality.com.au/projects/wp-keyring-importers/
-Version: 1.2
+Version: 1.3
 Author: Beau Lebens
 Author URI: http://dentedreality.com.au
 */
@@ -35,7 +35,7 @@ Extend this class to write an importer, using Keyring for authentication/request
 */
 
 // Load Importer API
-if ( !function_exists( 'register_importer ' ))
+if ( !function_exists( 'register_importer ' ) )
 	require_once ABSPATH . 'wp-admin/includes/import.php';
 
 abstract class Keyring_Importer_Base {
@@ -44,7 +44,7 @@ abstract class Keyring_Importer_Base {
 	const LABEL             = '';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = '';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
-	const KEYRING_VERSION   = '1.0'; // Minimum version of Keyring required
+	const KEYRING_VERSION   = '1.4'; // Minimum version of Keyring required
 
 	// You shouldn't need to edit (or override) these ones
 	var $step               = 'greet';
@@ -59,7 +59,7 @@ abstract class Keyring_Importer_Base {
 	function __construct() {
 		// Can't do anything if Keyring is not available.
 		// Prompt user to install Keyring (if they can), and bail
-		if ( !defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<=' ) ) {
+		if ( !defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<' ) ) {
 			if ( current_user_can( 'install_plugins' ) ) {
 				add_thickbox();
 				wp_enqueue_script( 'plugin-install' );
@@ -602,6 +602,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function import() {
 		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
+		do_action( 'import_start' );
 		$num = 0;
 		$this->header();
 		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
@@ -638,6 +639,8 @@ abstract class Keyring_Importer_Base {
 		} else {
 			$this->importer_goto( 'import' );
 		}
+
+		do_action( 'import_end' );
 
 		return true;
 	}
@@ -715,6 +718,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function do_auto_import() {
 		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
+		do_action( 'import_start' );
 		set_time_limit( 0 );
 		// In case auto-import has been disabled, clear all jobs and bail
 		if ( !$this->get_option( 'auto_import' ) ) {
@@ -750,6 +754,8 @@ abstract class Keyring_Importer_Base {
 
 			$num++;
 		}
+
+		do_action( 'import_end' );
 	}
 
 	/**
@@ -782,15 +788,19 @@ abstract class Keyring_Importer_Base {
 				)
 			);
 
-			if ( $attachments ) {
+			if ( $attachments ) { // @todo Only handles a single attachment
 				$data = wp_get_attachment_image_src( $attachments[0]->ID, $size );
 				if ( $data ) {
-					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" />';
+					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
 				}
 			}
 
-			// Regex out the previous img tag, put this one in there instead
-			$post['post_content'] = preg_replace( '!<img[^>]*>!i', $img, $post['post_content'] );
+			// Regex out the previous img tag, put this one in there instead, or prepend it to the top
+			if ( stristr( $post['post_content'], '<img' ) )
+				$post['post_content'] = preg_replace( '!<img[^>]*>!i', $img, $post['post_content'] );
+			else
+				$post['post_content'] = $img . "\n\n" . $post['post_content'];
+
 			$post['ID'] = $post_id;
 			wp_update_post( $post );
 		}

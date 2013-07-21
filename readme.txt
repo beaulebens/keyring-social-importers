@@ -2,7 +2,7 @@
 Tags: import, sync, social, keyring, delicious, flickr, foursquare, instagram, instapaper, tripit, twitter
 Requires at least: 3.3
 Tested up to: 3.5
-Stable Tag: 1.1
+Stable Tag: 1.3
 
 Take back control of the content you are creating on other social websites.
 
@@ -89,6 +89,12 @@ You can potentially write your own importers as well, using the base class inclu
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs)
 
 == Changelog ==
+= 1.3 =
+* Update Twitter API URLs to use new 1.1 API
+* Foursquare check-ins that contain photos now download and attach the photo to your local post, props Chris Finke
+* Added an action which is fired after *each post* is created/imported: do_action( 'keyring_post_imported', $post_id, $service_name, $post );
+* Add import_start/end actions which are called in core importers (for consistency)
+
 = 1.2 =
 * NOTE: Requires the latest version of Keyring (v1.4)
 * NEW: Instapaper importer

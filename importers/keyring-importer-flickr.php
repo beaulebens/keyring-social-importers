@@ -297,6 +297,8 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 				$this->sideload_media( $flickr_img, $post_id, $post, apply_filters( 'keyring_flickr_importer_image_embed_size', 'large' )  );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();

@@ -255,6 +255,8 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					add_post_meta( $post_id, 'raw_import_data', json_encode( $tripit_raw ) );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();
@@ -271,8 +273,8 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 	 * on the hour. If we want to run, then call the parent auto_import.
 	 */
 	function do_auto_import() {
-		if ( 24 == date( 'H' ) || 12 == date( 'H' ) )
-			return parent::do_auto_import();
+		if ( 01 == date( 'H' ) || 12 == date( 'H' ) )
+			parent::do_auto_import();
 	}
 }
 

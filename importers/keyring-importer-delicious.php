@@ -176,6 +176,8 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $delicious_raw ) );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();

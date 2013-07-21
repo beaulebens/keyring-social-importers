@@ -140,6 +140,14 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'long' => $post->venue->location->lng,
 			);
 
+			$photos = array();
+
+			if ( $post->photos->count > 0 ) {
+				foreach ( $post->photos->items as $photo ) {
+					$photos[] = $photo->prefix . "original" . $photo->suffix;
+				}
+			}
+
 			// Other bits
 			$post_author    = $this->get_option( 'author' );
 			$post_status    = 'publish';
@@ -158,7 +166,8 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'geo',
 				'foursquare_id',
 				'tags',
-				'foursquare_raw'
+				'foursquare_raw',
+				'photos'
 			);
 		}
 	}
@@ -189,6 +198,8 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				if ( !$post_id )
 					continue;
 
+				$post['ID'] = $post_id;
+
 				// Track which Keyring service was used
 				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
 
@@ -212,7 +223,15 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $foursquare_raw ) );
 
+				if ( ! empty( $photos ) ) {
+					foreach ( $photos as $photo ) {
+						$this->sideload_media( $photo, $post_id, $post, apply_filters( 'keyring_foursquare_importer_image_embed_size', 'full' ) );
+					}
+				}
+
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();
