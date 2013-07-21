@@ -3,7 +3,7 @@
 Plugin Name: Keyring Social Importers
 Description: Take back your content from different social media websites like Twitter, Flickr, Instagram, Delicious and Foursquare. Store everything in your own WordPress so that you can use it however you like.
 Plugin URL: http://dentedreality.com.au/projects/wp-keyring-importers/
-Version: 1.0
+Version: 1.3
 Author: Beau Lebens
 Author URI: http://dentedreality.com.au
 */
@@ -35,7 +35,7 @@ Extend this class to write an importer, using Keyring for authentication/request
 */
 
 // Load Importer API
-if ( !function_exists( 'register_importer ' ))
+if ( !function_exists( 'register_importer ' ) )
 	require_once ABSPATH . 'wp-admin/includes/import.php';
 
 abstract class Keyring_Importer_Base {
@@ -44,7 +44,7 @@ abstract class Keyring_Importer_Base {
 	const LABEL             = '';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = '';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
-	const KEYRING_VERSION   = '1.0'; // Minimum version of Keyring required
+	const KEYRING_VERSION   = '1.4'; // Minimum version of Keyring required
 
 	// You shouldn't need to edit (or override) these ones
 	var $step               = 'greet';
@@ -54,11 +54,12 @@ abstract class Keyring_Importer_Base {
 	var $options            = array();
 	var $posts              = array();
 	var $errors             = array();
+	var $request_method     = 'GET';
 
 	function __construct() {
 		// Can't do anything if Keyring is not available.
 		// Prompt user to install Keyring (if they can), and bail
-		if ( !defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<=' ) ) {
+		if ( !defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<' ) ) {
 			if ( current_user_can( 'install_plugins' ) ) {
 				add_thickbox();
 				wp_enqueue_script( 'plugin-install' );
@@ -154,14 +155,17 @@ abstract class Keyring_Importer_Base {
 	 * Warn the user that they need Keyring installed and activated.
 	 */
 	function require_keyring() {
-		if ( 'update.php' == basename( $_SERVER['REQUEST_URI'] ) )
+		global $keyring_required; // So that we only send the message once
+
+		if ( 'update.php' == basename( $_SERVER['REQUEST_URI'] ) || $keyring_required )
 			return;
+
+		$keyring_required = true;
 
 		echo '<div class="updated">';
 		echo '<p>';
 		printf(
-			__( 'The <strong>Keyring %1$s</strong> plugin requires the %2$s plugin to handle authentication. Please install it by clicking the button below, then you will be able to use the importer.', 'keyring' ),
-			static::LABEL,
+			__( 'The <strong>Keyring Social Importers</strong> plugin package requires the %1$s plugin to handle authentication. Please install it by clicking the button below, or activate it if you have already installed it, then you will be able to use the importers.', 'keyring' ),
 			'<a href="http://wordpress.org/extend/plugins/keyring/" target="_blank">Keyring</a>'
 		);
 		echo '</p>';
@@ -193,7 +197,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function set_option( $name, $val = null ) {
 		if ( is_array( $name ) )
-			$this->options = array_merge( $this->options, $name );
+			$this->options = array_merge( (array) $this->options, $name );
 		else if ( is_null( $name ) && is_null( $val ) ) // $name = null to reset all options
 			$this->options = array();
 		else if ( is_null( $val ) && isset( $this->options[ $name ] ) )
@@ -228,9 +232,18 @@ abstract class Keyring_Importer_Base {
 				$this->service->set_token( $token );
 			}
 
-			// If a token has been selected (and is available), then jump to the next setp
-			if ( $this->service && $this->service->get_token() )
+			if ( $this->service && $this->service->get_token() ) {
+				// If a token has been selected (and is available), then jump to the next setp
 				$this->step = 'options';
+			} else {
+				// Otherwise reset all default/built-ins
+				$this->set_option( array(
+					'category'    => null,
+					'tags'        => null,
+					'author'      => null,
+					'auto_import' => null,
+				) );
+			}
 
 			break;
 
@@ -327,6 +340,7 @@ abstract class Keyring_Importer_Base {
 	/**
 	 * The first screen the user sees in the import process. Summarizes the process and allows
 	 * them to either select an existing Keyring token or start the process of creating a new one.
+	 * Also makes sure they have the correct service available, and that it's configured correctly.
 	 */
 	function greet() {
 		if ( method_exists( $this, 'full_custom_greet' ) ) {
@@ -335,22 +349,43 @@ abstract class Keyring_Importer_Base {
 		}
 
 		$this->header();
-		?>
+
+		// If this service is not configured, then we can't continue
+		if ( ! $service = Keyring::get_service_by_name( static::SLUG ) ) : ?>
+			<p class="error"><?php echo esc_html( sprintf( __( "It looks like you don't have the %s service for Keyring installed.", 'keyring' ), static::LABEL ) ); ?></p>
+			<?php
+			$this->footer();
+			return;
+			?>
+		<?php elseif ( ! $service->is_configured() ) : ?>
+			<p class="error"><?php echo esc_html( sprintf( __( "Before you can use this importer, you need to configure the %s service within Keyring.", 'keyring' ), static::LABEL ) ); ?></p>
+			<?php
+			if (
+				current_user_can( 'read' ) // @todo this capability should match whatever the UI requires in Keyring
+			&&
+				! KEYRING__HEADLESS_MODE // In headless mode, there's nowhere (known) to link to
+			&&
+				has_action( 'keyring_' . static::SLUG . '_manage_ui' ) // Does this service have a UI to link to?
+			) {
+				$manage_kr_nonce = wp_create_nonce( 'keyring-manage' );
+				$manage_nonce = wp_create_nonce( 'keyring-manage-' . static::SLUG );
+				echo '<p><a href="' . esc_url( Keyring_Util::admin_url( static::SLUG, array( 'action' => 'manage', 'kr_nonce' => $manage_kr_nonce, 'nonce' => $manage_nonce ) ) ) . '" class="button-primary">' . sprintf( __( 'Configure %s Service', 'keyring' ), static::LABEL ) . '</a></p>';
+			}
+			$this->footer();
+			return;
+			?>
+		<?php endif; ?>
 		<div class="narrow">
 			<form action="admin.php?import=<?php echo static::SLUG; ?>&amp;step=greet" method="post">
 				<p><?php printf( __( "Howdy! This importer requires you to connect to %s before you can continue.", 'keyring' ), static::LABEL ); ?></p>
 				<?php do_action( 'keyring_importer_' . static::SLUG . '_greet' ); ?>
-				<?php if ( $service = Keyring::get_service_by_name( static::SLUG ) ) : ?>
-					<?php if ( $service->is_connected() ) : ?>
-						<p><?php echo sprintf( esc_html( __( 'It looks like you\'re already connected to %1$s via %2$s. You may use an existing connection, or create a new one:', 'keyring' ) ), static::LABEL, '<a href="' . esc_attr( Keyring_Util::admin_url() ) . '">Keyring</a>' ); ?></p>
-						<?php $service->token_select_box( static::SLUG . '_token', true ); ?>
-						<input type="submit" name="connect_existing" value="<?php echo esc_attr( __( 'Continue&hellip;', 'keyring' ) ); ?>" id="connect_existing" class="button-primary" />
-					<?php else : ?>
-						<p><?php echo esc_html( sprintf( __( "To get started, we'll need to connect to your %s account so that we can access your tweets.", 'keyring' ), static::LABEL ) ); ?></p>
-						<input type="submit" name="create_new" value="<?php echo esc_attr( sprintf( __( 'Connect to %s&#0133;', 'keyring' ), static::LABEL ) ); ?>" id="create_new" class="button-primary" />
-					<?php endif; ?>
+				<?php if ( $service->is_connected() ) : ?>
+					<p><?php echo sprintf( esc_html( __( 'It looks like you\'re already connected to %1$s via %2$s. You may use an existing connection, or create a new one:', 'keyring' ) ), static::LABEL, '<a href="' . esc_attr( Keyring_Util::admin_url() ) . '">Keyring</a>' ); ?></p>
+					<?php $service->token_select_box( static::SLUG . '_token', true ); ?>
+					<input type="submit" name="connect_existing" value="<?php echo esc_attr( __( 'Continue&hellip;', 'keyring' ) ); ?>" id="connect_existing" class="button-primary" />
 				<?php else : ?>
-					<p class="error"><?php echo esc_html( sprintf( __( "It looks like you don't have the %s service for Keyring installed.", 'keyring' ), static::LABEL ) ); ?></p>
+					<p><?php echo esc_html( sprintf( __( "To get started, we'll need to connect to your %s account so that we can access your tweets.", 'keyring' ), static::LABEL ) ); ?></p>
+					<input type="submit" name="create_new" value="<?php echo esc_attr( sprintf( __( 'Connect to %s&#0133;', 'keyring' ), static::LABEL ) ); ?>" id="create_new" class="button-primary" />
 				<?php endif; ?>
 			</form>
 		</div>
@@ -398,16 +433,14 @@ abstract class Keyring_Importer_Base {
 		$this->header();
 
 		?>
-		<form name="import-<?php echo esc_attr( static::SLUG ); ?>" method="post" action="admin.php?import=<?php echo esc_attr( static::SLUG ); ?>&amp;step=options">
+		<form name="import-<?php echo esc_attr( static::SLUG ); ?>" method="post" action="admin.php?import=<?php esc_attr_e( static::SLUG ); ?>&amp;step=options">
 		<?php
 		if ( $this->get_option( 'auto_import' ) ) :
 			$auto_import_button_label = __( 'Save Changes', 'keyring' );
 			?>
-			<div>
-				<p style="background: #efefef; padding: 10px; margin: 10px 0px;">
-					<?php _e( "You are currently auto-importing new content using the settings below.", 'keyring' ); ?>
-					<input type="submit" name="refresh" class="button" id="options-refresh" value="<?php _e( 'Check for new content now', 'keyring' ); ?>" />
-				</p>
+			<div class="updated inline">
+				<p><?php _e( "You are currently auto-importing new content using the settings below.", 'keyring' ); ?></p>
+				<p><input type="submit" name="refresh" class="button" id="options-refresh" value="<?php esc_attr_e( 'Check for new content now', 'keyring' ); ?>" /></p>
 			</div><?php
 		else :
 			$auto_import_button_label = __( 'Start auto-importing', 'keyring' );
@@ -443,6 +476,21 @@ abstract class Keyring_Importer_Base {
 				</tr>
 				<tr valign="top">
 					<th scope="row">
+						<label for="tags"><?php _e( 'Add tags to all posts', 'keyring' ) ?></label>
+					</th>
+					<td>
+						<?php
+						if ( $tags = $this->get_option( 'tags' ) )
+							$tags = implode( ', ', array_map( 'trim', $tags ) );
+						else
+							$tags = '';
+						?>
+						<input type="text" class="regular-text" name="tags" id="tags" value="<?php echo esc_html( $tags ); ?>" />
+						<p class="description"><?php _e( 'Comma-separated list of tags to add to all imported posts.', 'keyring' ); ?></p>
+					</td>
+				</tr>
+				<tr valign="top">
+					<th scope="row">
 						<label for="author"><?php _e( 'Author of imported posts', 'keyring' ) ?></label>
 					</th>
 					<td>
@@ -470,7 +518,7 @@ abstract class Keyring_Importer_Base {
 
 				<tr valign="top">
 					<th scope="row">
-						<label for="auto_import"><?php _e( 'Import new content automatically', 'keyring' ) ?></label>
+						<label for="auto_import"><?php _e( 'Auto-import new content', 'keyring' ) ?></label>
 					</th>
 					<td>
 						<input type="checkbox" value="1" name="auto_import" id="auto_import"<?php echo checked( 'true' == $this->get_option( 'auto_import', 'true' ) ); ?> />
@@ -554,6 +602,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function import() {
 		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
+		do_action( 'import_start' );
 		$num = 0;
 		$this->header();
 		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
@@ -591,6 +640,8 @@ abstract class Keyring_Importer_Base {
 			$this->importer_goto( 'import' );
 		}
 
+		do_action( 'import_end' );
+
 		return true;
 	}
 
@@ -601,7 +652,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function make_request() {
 		$url = $this->build_request_url();
-		return $this->service->request( $url, array( 'method' => 'GET', 'timeout' => 10 ) );
+		return $this->service->request( $url, array( 'method' => $this->request_method, 'timeout' => 10 ) );
 	}
 
 	/**
@@ -667,6 +718,7 @@ abstract class Keyring_Importer_Base {
 	 */
 	function do_auto_import() {
 		defined( 'WP_IMPORTING' ) or define( 'WP_IMPORTING', true );
+		do_action( 'import_start' );
 		set_time_limit( 0 );
 		// In case auto-import has been disabled, clear all jobs and bail
 		if ( !$this->get_option( 'auto_import' ) ) {
@@ -702,6 +754,8 @@ abstract class Keyring_Importer_Base {
 
 			$num++;
 		}
+
+		do_action( 'import_end' );
 	}
 
 	/**
@@ -734,15 +788,19 @@ abstract class Keyring_Importer_Base {
 				)
 			);
 
-			if ( $attachments ) {
+			if ( $attachments ) { // @todo Only handles a single attachment
 				$data = wp_get_attachment_image_src( $attachments[0]->ID, $size );
 				if ( $data ) {
-					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" />';
+					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
 				}
 			}
 
-			// Regex out the previous img tag, put this one in there instead
-			$post['post_content'] = preg_replace( '!<img[^>]*>!i', $img, $post['post_content'] );
+			// Regex out the previous img tag, put this one in there instead, or prepend it to the top
+			if ( stristr( $post['post_content'], '<img' ) )
+				$post['post_content'] = preg_replace( '!<img[^>]*>!i', $img, $post['post_content'] );
+			else
+				$post['post_content'] = $img . "\n\n" . $post['post_content'];
+
 			$post['ID'] = $post_id;
 			wp_update_post( $post );
 		}

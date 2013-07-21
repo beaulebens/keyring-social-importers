@@ -33,6 +33,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -130,9 +131,9 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			}
 
 			// Tags
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( !empty( $post->tags ) )
-				$tags = $post->tags;
+				$tags = array_merge( $tags, $post->tags );
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );
@@ -217,6 +218,8 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();
