@@ -98,14 +98,12 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Locate our most recently imported Tweet, and get ones since then
 			$latest = get_posts( array(
 				'numberposts' => 1,
-				'orderby' => 'date',
-				'order' => 'DESC',
-				'meta_key'    => 'keyring_service', // In case there are other asides
-				'meta_value'  => 'twitter',
-				'tax_query' => array( array(
-					'taxonomy' => 'post_format',
-					'field' => 'slug',
-					'terms' => array( 'post-format-aside' ), // Tweets stored as asides
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'tax_query'   => array( array(
+					'taxonomy' => 'keyring_services',
+					'field'    => 'slug',
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -171,7 +169,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 			// Clean up content a bit
 			$post_content = $post->text;
-			$post_content = $wpdb->escape( html_entity_decode( trim( $post_content ) ) );
+			$post_content = esc_sql( html_entity_decode( trim( $post_content ) ) );
 
 			// Handle entities supplied by Twitter
 			if ( count( $post->entities->urls ) ) {
@@ -255,7 +253,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				set_post_format( $post_id, 'aside' );
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Store the twitter id, reply ids etc
 				add_post_meta( $post_id, 'twitter_id', $twitter_id );

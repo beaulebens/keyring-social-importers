@@ -95,6 +95,27 @@ abstract class Keyring_Importer_Base {
 			$this->service->set_token( $token );
 		}
 
+		// Make sure the taxonomy entry is ready to go
+		$this->taxonomy = null;
+		$terms = get_terms( 'keyring_services', array( 'hide_empty' => false ) );
+		foreach ( (array) $terms as $term ) {
+			if ( static::LABEL == $term->name ) {
+				$this->taxonomy = $term;
+				break;
+			}
+		}
+		if ( is_null( $this->taxonomy ) ) {
+			$term = wp_insert_term(
+				static::LABEL,
+				'keyring_services',
+				array(
+					'description' => sprintf( __( 'Posts imported from %s', 'keyring' ), static::LABEL ),
+					'slug'        => static::SLUG,
+				)
+			);
+			$this->taxonomy = get_term( $term['term_id'], 'keyring_services' );
+		}
+
 		// Make sure we have a scheduled job to handle auto-imports if enabled
 		if ( $this->get_option( 'auto_import' ) && !wp_get_schedule( 'keyring_' . static::SLUG . '_import_auto' ) )
 			wp_schedule_event( time(), 'hourly', 'keyring_' . static::SLUG . '_import_auto' );
@@ -685,7 +706,7 @@ abstract class Keyring_Importer_Base {
 				if ( next_counter <= 0 ) {
 					if ( jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).length ) {
 						jQuery( "#<?php echo esc_js( static::SLUG ); ?>-import input[type='submit']" ).hide();
-						str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="images/wpspin_light.gif" alt="" id="processing" align="top" />';
+						var str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="images/loading.gif" alt="" id="processing" align="top" />';
 						jQuery( '#auto-message' ).html( str );
 						jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).submit();
 						return;
@@ -806,6 +827,37 @@ abstract class Keyring_Importer_Base {
 		}
 	}
 }
+
+/**
+ * Creates a taxonomy where we will reference which service (if any) each post is imported from.
+ * We intentionally create it so that it's not public (no UI) and it uses a custom capability that
+ * is not assigned to any role/user, so end-users cannot modify the taxonomy. Individual importers
+ * create an assign their own terms as required.
+ */
+add_action( 'init', function() {
+	// Only create the taxonomy if it's not there already
+	if ( !taxonomy_exists( 'keyring_services' ) ) {
+		register_taxonomy(
+			'keyring_services',
+			'post',
+			array(
+				'label'             => __( 'Imported From', 'keyring' ),
+				'public'            => true, // Allows you to use them in Custom Menus
+				'hierarchical'      => true,
+				'show_admin_column' => true,
+				'rewrite'           => array(
+											'slug' => 'service',
+										),
+				'capabilities'      => array( // we intentionally provide these because then noone will have the ability to mess with them
+											'manage_terms' => 'manage_keyring',
+											'edit_terms'   => 'manage_keyring',
+											'delete_terms' => 'manage_keyring',
+											'assign_terms' => 'manage_keyring',
+										),
+			)
+		);
+	}
+} );
 
 /**
  * Load the importer and register it with WordPress.

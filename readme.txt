@@ -89,6 +89,13 @@ You can potentially write your own importers as well, using the base class inclu
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs)
 
 == Changelog ==
+= 1.4 =
+* BREAKING: Change from using a value in post meta (keyring_service) to using a custom taxonomy ('keyring_services') to reference the service a post was imported from. Entries are automatically created for all importers.
+* There is a script called 'migrate-keyring-postmeta-to-taxonomy.php' included in the plugin. Put it in the root of your WP install and run it (as many times as necessary, even if it crashes/runs out of memory) until it produces no output. That will convert all existing posts and remove their keyring_service postmeta.
+* Fix deprecated notice and use esc_sql()
+* Fix a string that didn't havea a textdomain
+* Tweak Instapaper importer to use last progress date to get links published closer to when you read them
+
 = 1.3 =
 * Update Twitter API URLs to use new 1.1 API
 * Foursquare check-ins that contain photos now download and attach the photo to your local post, props Chris Finke

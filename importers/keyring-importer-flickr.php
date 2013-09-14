@@ -115,14 +115,12 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			// Locate our most recently imported image, and get ones since then
 			$latest = get_posts( array(
 				'numberposts' => 1,
-				'orderby' => 'modified', // This is where we store date UPLOADED (not taken)
-				'order' => 'DESC',
-				'meta_key'    => 'keyring_service', // In case there are other asides
-				'meta_value'  => 'flickr',
-				'tax_query' => array( array(
-					'taxonomy' => 'post_format',
+				'orderby'     => 'modified', // This is where we store date UPLOADED (not taken)
+				'order'       => 'DESC',
+				'tax_query'   => array( array(
+					'taxonomy' => 'keyring_services',
 					'field'    => 'slug',
-					'terms'    => array( 'post-format-image' ), // Tweets stored as asides
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -274,7 +272,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 				set_post_format( $post_id, 'image' );
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Store the flickr id
 				add_post_meta( $post_id, 'flickr_id', $flickr_id );

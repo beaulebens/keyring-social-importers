@@ -232,7 +232,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					continue;
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as a status
 				set_post_format( $post_id, 'status' );

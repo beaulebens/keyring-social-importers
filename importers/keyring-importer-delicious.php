@@ -49,14 +49,12 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 			// Get most recent bookmark we've imported (if any), and its date so that we can get new ones since then
 			$latest = get_posts( array(
 				'numberposts' => 1,
-				'orderby' => 'date',
-				'order' => 'DESC',
-				'meta_key'    => 'keyring_service', // In case we have other links
-				'meta_value'  => 'delicious',
-				'tax_query' => array( array(
-					'taxonomy' => 'post_format',
-					'field' => 'slug',
-					'terms' => array( 'post-format-link' ), // Stored as links
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'tax_query'   => array( array(
+					'taxonomy' => 'keyring_services',
+					'field'    => 'slug',
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -159,7 +157,7 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 					continue;
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as a link
 				set_post_format( $post_id, 'link' );

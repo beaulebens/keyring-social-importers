@@ -81,7 +81,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 			$post_title = $post->title;
 
 			// Parse/adjust dates
-			$post_date_gmt = gmdate( 'Y-m-d H:i:s', $post->time );
+			$post_date_gmt = gmdate( 'Y-m-d H:i:s', $post->progress_timestamp ); // last seen "progress"
 			$post_date     = get_date_from_gmt( $post_date_gmt );
 
 			// Apply selected category
@@ -145,9 +145,8 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 			||
 				$post_id = post_exists( $post_title, $post_content, $post_date )
 			) {
-				// Looks like a duplicate, which means we've already processed it, so bail to avoid DB hits
+				// Looks like a duplicate, which means we've already processed it
 				$skipped++;
-				break;
 			} else {
 				$post_id = wp_insert_post( $post );
 
@@ -158,7 +157,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 					continue;
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as a link
 				set_post_format( $post_id, 'link' );

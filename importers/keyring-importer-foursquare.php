@@ -51,12 +51,10 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'numberposts' => 1,
 				'orderby'     => 'date',
 				'order'       => 'DESC',
-				'meta_key'    => 'keyring_service',
-				'meta_value'  => 'foursquare',
 				'tax_query'   => array( array(
-					'taxonomy' => 'post_format',
+					'taxonomy' => 'keyring_services',
 					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ), // Check-ins are marked as a 'status'
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -201,7 +199,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				$post['ID'] = $post_id;
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as an aside
 				set_post_format( $post_id, 'status' );
