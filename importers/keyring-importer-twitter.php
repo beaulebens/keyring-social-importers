@@ -21,7 +21,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	function custom_options() {
 		?><tr valign="top">
 			<th scope="row">
-				<label for="include_rts"><?php _e( 'Include retweets', 'keyring' ); ?></label>
+				<label for="include_rts"><?php _e( 'Import retweets', 'keyring' ); ?></label>
 			</th>
 			<td>
 				<input type="checkbox" value="1" name="include_rts" id="include_rts"<?php echo checked( $this->get_option( 'include_rts', true ) ); ?> />
@@ -29,7 +29,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		</tr>
 		<tr valign="top">
 			<th scope="row">
-				<label for="include_replies"><?php _e( 'Include @replies', 'keyring' ); ?></label>
+				<label for="include_replies"><?php _e( 'Import @replies', 'keyring' ); ?></label>
 			</th>
 			<td>
 				<input type="checkbox" value="1" name="include_replies" id="include_replies"<?php echo checked( $this->get_option( 'include_replies', true ) ); ?> />
@@ -66,6 +66,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'        => (int) $_POST['category'],
+				'tags'            => explode( ',', $_POST['tags'] ),
 				'author'          => (int) $_POST['author'],
 				'include_replies' => (bool) $_POST['include_replies'],
 				'include_rts'     => (bool) $_POST['include_rts'],
@@ -79,7 +80,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 	function build_request_url() {
 		// Base request URL
-		$url = "http://api.twitter.com/1/statuses/user_timeline.json?";
+		$url = "https://api.twitter.com/1.1/statuses/user_timeline.json?";
 		$params = array(
 			'user_id' => $this->get_option( 'user_id' ),
 			'trim_user' => 'true',
@@ -97,14 +98,12 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Locate our most recently imported Tweet, and get ones since then
 			$latest = get_posts( array(
 				'numberposts' => 1,
-				'orderby' => 'date',
-				'order' => 'DESC',
-				'meta_key'    => 'keyring_service', // In case there are other asides
-				'meta_value'  => 'twitter',
-				'tax_query' => array( array(
-					'taxonomy' => 'post_format',
-					'field' => 'slug',
-					'terms' => array( 'post-format-aside' ), // Tweets stored as asides
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'tax_query'   => array( array(
+					'taxonomy' => 'keyring_services',
+					'field'    => 'slug',
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -170,7 +169,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 			// Clean up content a bit
 			$post_content = $post->text;
-			$post_content = $wpdb->escape( html_entity_decode( trim( $post_content ) ) );
+			$post_content = esc_sql( html_entity_decode( trim( $post_content ) ) );
 
 			// Handle entities supplied by Twitter
 			if ( count( $post->entities->urls ) ) {
@@ -180,9 +179,9 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			}
 
 			// Any hashtags used in a tweet will be applied to the Post as tags in WP
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post_content, $tag ) )
-				$tags = $tag[2];
+				$tags = array_merge( $tags, $tag[2] );
 
 			// Add HTML links to URLs, usernames and hashtags
 			$post_content = make_clickable( esc_html( $post_content ) );
@@ -254,7 +253,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				set_post_format( $post_id, 'aside' );
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Store the twitter id, reply ids etc
 				add_post_meta( $post_id, 'twitter_id', $twitter_id );
@@ -281,6 +280,8 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $twitter_raw ) );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();

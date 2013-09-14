@@ -17,10 +17,10 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
-			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your pictures into." ) );
 
 		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
-			$this->error( __( "You must select an author to assign to all checkins." ) );
+			$this->error( __( "You must select an author to assign to all pictures." ) );
 
 		if ( isset( $_POST['auto_import'] ) )
 			$_POST['auto_import'] = true;
@@ -33,6 +33,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -58,12 +59,10 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			'numberposts' => 1,
 			'orderby'     => 'date',
 			'order'       => $order,
-			'meta_key'    => 'keyring_service',
-			'meta_value'  => 'instagram',
 			'tax_query'   => array( array(
-				'taxonomy' => 'post_format',
+				'taxonomy' => 'keyring_services',
 				'field'    => 'slug',
-				'terms'    => array( 'post-format-image' ), // Instagrams are marked as 'image'
+				'terms'    => array( $this->taxonomy->slug ),
 				'operator' => 'IN',
 			) ),
 		) );
@@ -87,10 +86,10 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-instagram-importer-failed-download', __( 'Failed to download your images from Instagram. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-instagram-importer-failed-download', __( 'Failed to download your images from Instagram. Please wait a few minutes and try again.', 'keyring' ) );
 		}
 
-		// Make sure we have some checkins to parse
+		// Make sure we have some pictures to parse
 		if ( !is_object( $importdata ) || !count( $importdata->data ) ) {
 			$this->finished = true;
 			return;
@@ -130,9 +129,9 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			}
 
 			// Tags
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( !empty( $post->tags ) )
-				$tags = $post->tags;
+				$tags = array_merge( $tags, $post->tags );
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );
@@ -190,7 +189,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 					continue;
 
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as an aside
 				set_post_format( $post_id, 'image' );
@@ -217,6 +216,8 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
 
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();

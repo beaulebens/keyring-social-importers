@@ -32,6 +32,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
 			) );
@@ -50,12 +51,10 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'numberposts' => 1,
 				'orderby'     => 'date',
 				'order'       => 'DESC',
-				'meta_key'    => 'keyring_service',
-				'meta_value'  => 'foursquare',
 				'tax_query'   => array( array(
-					'taxonomy' => 'post_format',
+					'taxonomy' => 'keyring_services',
 					'field'    => 'slug',
-					'terms'    => array( 'post-format-status' ), // Check-ins are marked as a 'status'
+					'terms'    => array( $this->taxonomy->slug ),
 					'operator' => 'IN',
 				) ),
 			) );
@@ -124,13 +123,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			}
 
 			// Include any comment/shout the user made when posting
-			$tags = array();
+			$tags = $this->get_option( 'tags' );
 			if ( isset( $post->shout ) ) {
 				// Any hashtags used in a note will be applied to the Post as tags in WP
 				if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post->shout, $tag ) )
-					$tags = $tag[2];
+					$tags = array_merge( $tags, $tag[2] );
 
-				$post_content .= "\n\n<blockquote>" . $post->shout . "</blockquote>";
+				$post_content .= "\n\n<blockquote class='foursquare-note'>" . $post->shout . "</blockquote>";
 			}
 
 			// Include geo Data
@@ -138,6 +137,14 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'lat'  => $post->venue->location->lat,
 				'long' => $post->venue->location->lng,
 			);
+
+			$photos = array();
+
+			if ( $post->photos->count > 0 ) {
+				foreach ( $post->photos->items as $photo ) {
+					$photos[] = $photo->prefix . "original" . $photo->suffix;
+				}
+			}
 
 			// Other bits
 			$post_author    = $this->get_option( 'author' );
@@ -157,7 +164,8 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'geo',
 				'foursquare_id',
 				'tags',
-				'foursquare_raw'
+				'foursquare_raw',
+				'photos'
 			);
 		}
 	}
@@ -188,8 +196,10 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				if ( !$post_id )
 					continue;
 
+				$post['ID'] = $post_id;
+
 				// Track which Keyring service was used
-				add_post_meta( $post_id, 'keyring_service', $this->service->get_name() );
+				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
 				// Mark it as an aside
 				set_post_format( $post_id, 'status' );
@@ -211,7 +221,15 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $foursquare_raw ) );
 
+				if ( ! empty( $photos ) ) {
+					foreach ( $photos as $photo ) {
+						$this->sideload_media( $photo, $post_id, $post, apply_filters( 'keyring_foursquare_importer_image_embed_size', 'full' ) );
+					}
+				}
+
 				$imported++;
+
+				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();

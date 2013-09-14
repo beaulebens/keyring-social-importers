@@ -1,9 +1,8 @@
 === Keyring Social Importers ===
-
-Tags: import, sync, twitter, instagram, flickr, delicious, foursquare
+Tags: import, sync, social, keyring, delicious, flickr, foursquare, instagram, instapaper, tripit, twitter
 Requires at least: 3.3
 Tested up to: 3.5
-Stable Tag: 1.0
+Stable Tag: 1.4
 
 Take back control of the content you are creating on other social websites.
 
@@ -23,6 +22,8 @@ Importers included currently:
 * [Flickr](http://flickr.com/)
 * [Foursquare](http://foursquare.com/)
 * [Instagram](http://instagram.com/)
+* [Instapaper](http://instapaper.com/)
+* [TripIt](http://tripit.com/)
 * [Twitter](http://twitter.com/)
 
 You can potentially write your own importers as well, using the base class included.
@@ -69,6 +70,16 @@ You can potentially write your own importers as well, using the base class inclu
 * Posts are marked with the 'image' Post Format
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url
 
+= Instapaper =
+* Requires a [paid account](http://www.instapaper.com/subscription) (to access their API)
+* Imports your *Archived* links and creates a post for each of them (with post format of Link)
+* Uses the title from the document in Instapaper, if there is a description associated then it uses that as well
+
+= TripIt =
+* Trips are imported, with flights mapped and posted as Status-format posts
+* Geo data is stored using something resembling the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata)
+* Posts are tagged using airport codes and city names
+
 = Twitter =
 * Every [tweet](http://twitter.com/) will be downloaded as an individual Post
 * Posts are marked with the 'aside' Post Format
@@ -78,8 +89,33 @@ You can potentially write your own importers as well, using the base class inclu
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs)
 
 == Changelog ==
+= 1.4 =
+* BREAKING: Change from using a value in post meta (keyring_service) to using a custom taxonomy ('keyring_services') to reference the service a post was imported from. Entries are automatically created for all importers.
+* There is a script called 'migrate-keyring-postmeta-to-taxonomy.php' included in the plugin. Put it in the root of your WP install and run it (as many times as necessary, even if it crashes/runs out of memory) until it produces no output. That will convert all existing posts and remove their keyring_service postmeta.
+* Fix deprecated notice and use esc_sql()
+* Fix a string that didn't havea a textdomain
+* Tweak Instapaper importer to use last progress date to get links published closer to when you read them
+
+= 1.3 =
+* Update Twitter API URLs to use new 1.1 API
+* Foursquare check-ins that contain photos now download and attach the photo to your local post, props Chris Finke
+* Added an action which is fired after *each post* is created/imported: do_action( 'keyring_post_imported', $post_id, $service_name, $post );
+* Add import_start/end actions which are called in core importers (for consistency)
+
+= 1.2 =
+* NOTE: Requires the latest version of Keyring (v1.4)
+* NEW: Instapaper importer
+* NEW: TripIt importer
+* Only send the "must install Keyring" message once per page
+* Better handling of options for each importer
+* Check if a service is configured in Keyring before attempting to use it
+* Allow default tags to be applied to all imported posts
+* Clean up help text and instructions on a few importers
+
 = 1.1 =
 * Updated to work with Keyring 1.2
+* Added TripIt importer (for air travel only, 1 post per "flight series")
+* Added "Default tags" option for all importers
 
 = 1.0 =
 * Initial check-in without templating engine

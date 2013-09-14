@@ -3,23 +3,25 @@
 // This is a horrible hack, because WordPress doesn't support dependencies/load-order.
 // We wrap our entire class definition in a function, and then only call that on a hook
 // where we know that the class we're extending is available. *hangs head in shame*
-function Keyring_Delicious_Importer() {
+function Keyring_Instapaper_Importer() {
 
-class Keyring_Delicious_Importer extends Keyring_Importer_Base {
-	const SLUG              = 'delicious';    // e.g. 'twitter' (should match a service in Keyring)
-	const LABEL             = 'Delicious';    // e.g. 'Twitter'
-	const KEYRING_SERVICE   = 'Keyring_Service_Delicious';    // Full class name of the Keyring_Service this importer requires
-	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
+class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
+	const SLUG              = 'instapaper'; // e.g. 'twitter' (should match a service in Keyring)
+	const LABEL             = 'Instapaper'; // e.g. 'Twitter'
+	const KEYRING_SERVICE   = 'Keyring_Service_Instapaper'; // Full class name of the Keyring_Service this importer requires
+	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
+	const LINKS_PER_REQUEST = 25; // How many links to request from Instapaper in each request
 
-	var $auto_import = false;
+	var $auto_import        = false;
+	var $request_method     = 'POST';
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
-			$this->error( __( "Make sure you select a valid category to import your bookmarks into." ) );
+			$this->error( __( "Make sure you select a valid category to import your links into." ) );
 
 		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
-			$this->error( __( "You must select an author to assign to all bookmarks." ) );
+			$this->error( __( "You must select an author to assign to all imported links." ) );
 
 		if ( isset( $_POST['auto_import'] ) )
 			$_POST['auto_import'] = true;
@@ -42,32 +44,13 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 	}
 
 	function build_request_url() {
-		// Base request URL
-		$url = "https://api.del.icio.us/v1/posts/all?results=200";
+		// http://www.instapaper.com/api/full
+		$url = "https://www.instapaper.com/api/1/bookmarks/list?folder_id=archive";
 
-		if ( $this->auto_import ) {
-			// Get most recent bookmark we've imported (if any), and its date so that we can get new ones since then
-			$latest = get_posts( array(
-				'numberposts' => 1,
-				'orderby'     => 'date',
-				'order'       => 'DESC',
-				'tax_query'   => array( array(
-					'taxonomy' => 'keyring_services',
-					'field'    => 'slug',
-					'terms'    => array( $this->taxonomy->slug ),
-					'operator' => 'IN',
-				) ),
-			) );
-
-			// If we have already imported some, then start since the most recent
-			if ( $latest ) {
-				$max = str_replace( ' ', 'T', $latest[0]->post_date_gmt ) . 'Z'; // Ridiculous format
-				$url = add_query_arg( 'fromdt', $max, $url );
-			}
-		} else {
-			// Handle page offsets (only for non-auto-import requests)
-			$url = add_query_arg( 'start', $this->get_option( 'page', 0 ) * 200, $url );
-		}
+		if ( $this->auto_import )
+			$url = add_query_arg( array( 'limit' => self::LINKS_PER_REQUEST ), $url );
+		else
+			$url = add_query_arg( array( 'limit' => 500 ), $url ); // The most you can get
 
 		return $url;
 	}
@@ -79,43 +62,45 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-delicious-importer-failed-download', __( 'Failed to download or parse your bookmarks from Delicious. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-instapaper-importer-failed-download', __( 'Failed to download or parse your links from Instapaper. Please wait a few minutes and try again.' ) );
 		}
 
 		// Make sure we have some bookmarks to parse
-		if ( !is_object( $importdata ) || !count( $importdata->post ) ) {
+		if ( !is_array( $importdata ) || count( $importdata ) < 2 ) {
 			$this->finished = true;
 			return;
 		}
 
+		usort( $importdata, array( $this, 'sort_by_time' ) );
+
 		// Parse/convert everything to WP post structs
-		foreach ( $importdata->post as $post ) {
-			$post_title = (string) $post['description'];
+		foreach ( $importdata as $post ) {
+			if ( 'bookmark' != $post->type )
+				continue;
+
+			$post_title = $post->title;
 
 			// Parse/adjust dates
-			$post_date_gmt = strtotime( (string) $post['time'] );
-			$post_date_gmt = gmdate( 'Y-m-d H:i:s', $post_date_gmt );
+			$post_date_gmt = gmdate( 'Y-m-d H:i:s', $post->progress_timestamp ); // last seen "progress"
 			$post_date     = get_date_from_gmt( $post_date_gmt );
 
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
-			// Figure out tags
-			$tags = (string) $post['tag'];
-			$tags = array_merge( $this->get_option( 'tags' ), explode( ' ', strtolower( $tags ) ) );
+			// Just default tags here
+			$tags = $this->get_option( 'tags' );
 
 			// Construct a post body
-			$href         = (string) $post['href'];
-			$extended     = (string) $post['extended'];
-			$post_content = '<a href="' . $href . '" class="delicious-title">' . $post_title . '</a>';
-			if ( !empty( $extended ) )
-				$post_content .= "\n\n<blockquote class='delicious-note'>" . $extended . '</blockquote>';
+			$href         = $post->url;
+			$post_content = '<a href="' . $href . '" class="instapaper-title">' . $post_title . '</a>';
+			if ( !empty( $post->description ) )
+				$post_content .= "\n\n<blockquote class='instapaper-note'>" . $post->description . '</blockquote>';
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );
 			$post_status   = 'publish';
-			$delicious_id  = (string) $post['hash'];
-			$delicious_raw = $post;
+			$instapaper_id  = $post->bookmark_id;
+			$instapaper_raw = $post;
 
 			// Build the post array, and hang onto it along with the others
 			$this->posts[] = compact(
@@ -126,12 +111,25 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 				'post_title',
 				'post_status',
 				'post_category',
-				'delicious_id',
 				'tags',
 				'href',
-				'delicious_raw'
+				'instapaper_id',
+				'instapaper_raw'
 			);
 		}
+	}
+
+	/**
+	 * Sorts bookmarks returned by date, newest first
+	 */
+	function sort_by_time( $a, $b ) {
+		if ( empty( $a->time ) || empty( $b->time ) )
+			return 0;
+
+		if ( $a->time == $b->time ) {
+			return 0;
+		}
+		return ( $a->time > $b->time ) ? -1 : 1;
 	}
 
 	function insert_posts() {
@@ -141,11 +139,13 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 		foreach ( $this->posts as $post ) {
 			extract( $post );
 			if (
-				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'delicious_id' AND meta_value = %s", $delicious_id ) )
+				!$instapaper_id
+			||
+				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'instapaper_id' AND meta_value = %s", $instapaper_id ) )
 			||
 				$post_id = post_exists( $post_title, $post_content, $post_date )
 			) {
-				// Looks like a duplicate
+				// Looks like a duplicate, which means we've already processed it
 				$skipped++;
 			} else {
 				$post_id = wp_insert_post( $post );
@@ -165,13 +165,13 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 				// Update Category
 				wp_set_post_categories( $post_id, $post_category );
 
-				add_post_meta( $post_id, 'delicious_id', $delicious_id );
+				add_post_meta( $post_id, 'instapaper_id', $instapaper_id );
 				add_post_meta( $post_id, 'href', $href );
 
 				if ( count( $tags ) )
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 
-				add_post_meta( $post_id, 'raw_import_data', json_encode( $delicious_raw ) );
+				add_post_meta( $post_id, 'raw_import_data', json_encode( $instapaper_raw ) );
 
 				$imported++;
 
@@ -179,6 +179,7 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 			}
 		}
 		$this->posts = array();
+		$this->finished = true; // All done in a single request
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
@@ -189,11 +190,11 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 
 
 add_action( 'init', function() {
-	Keyring_Delicious_Importer(); // Load the class code from above
+	Keyring_Instapaper_Importer(); // Load the class code from above
 	keyring_register_importer(
-		'delicious',
-		'Keyring_Delicious_Importer',
+		'instapaper',
+		'Keyring_Instapaper_Importer',
 		plugin_basename( __FILE__ ),
-		__( 'Import all of your Delicious bookmarks as Posts with the "Link" format.', 'keyring' )
+		__( 'Import all of your archived Instapaper links as Posts with the "Link" format.', 'keyring' )
 	);
 } );
