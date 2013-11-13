@@ -814,6 +814,10 @@ abstract class Keyring_Importer_Base {
 				if ( $data ) {
 					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
 				}
+
+				$attachments[0]->post_date_gmt = $post['post_date_gmt'];
+				$attachments[0]->post_date = $post['post_date'];
+				wp_update_post( (array) $attachments[0] );
 			}
 
 			// Regex out the previous img tag, put this one in there instead, or prepend it to the top
@@ -849,14 +853,31 @@ add_action( 'init', function() {
 											'slug' => 'service',
 										),
 				'capabilities'      => array( // we intentionally provide these because then noone will have the ability to mess with them
-											'manage_terms' => 'manage_keyring',
-											'edit_terms'   => 'manage_keyring',
-											'delete_terms' => 'manage_keyring',
-											'assign_terms' => 'manage_keyring',
+											'manage_terms' => 'edit_posts',
+											'edit_terms'   => 'edit_posts',
+											'delete_terms' => 'edit_posts',
+											'assign_terms' => 'edit_posts',
 										),
 			)
 		);
 	}
+} );
+
+/**
+ * Since we're introducing a new taxonomy, and we're likely to end up with a lot
+ * of posts using it, let's make it a little easier to filter the admin to view
+ * posts just for each service.
+ */
+add_action( 'restrict_manage_posts', function() {
+	$terms = get_terms( 'keyring_services' );
+	if ( count( $terms ) ) :
+	?><select name="keyring_services" id="keyring_services">
+	<option value=""><?php esc_html_e( 'All Services', 'keyring' ); ?></option>
+	<?php foreach ( $terms as $term ): ?>
+	<option<?php selected( isset( $_REQUEST['keyring_services'] ) && $_REQUEST['keyring_services'] == $term->slug ); ?> value="<?php echo esc_attr( $term->slug ); ?>"><?php echo esc_html( $term->name ); ?></option>
+	<?php endforeach; ?>
+	</select><?php
+	endif;
 } );
 
 /**
