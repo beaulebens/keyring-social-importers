@@ -706,7 +706,7 @@ abstract class Keyring_Importer_Base {
 				if ( next_counter <= 0 ) {
 					if ( jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).length ) {
 						jQuery( "#<?php echo esc_js( static::SLUG ); ?>-import input[type='submit']" ).hide();
-						var str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="images/loading.gif" alt="" id="processing" align="top" />';
+						var str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="<?php echo esc_url( admin_url( 'images/loading.gif' ) ); ?>" alt="" id="processing" align="top" width="16" height="16" />';
 						jQuery( '#auto-message' ).html( str );
 						jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).submit();
 						return;
@@ -724,7 +724,7 @@ abstract class Keyring_Importer_Base {
 	function done() {
 		$this->header();
 		echo '<p>' . sprintf( __( 'Imported a total of %s posts.', 'keyring' ), number_format( $this->get_option( 'imported' ) ) ) . '</p>';
-		echo '<h3>' . sprintf( __( 'All done. <a href="%1$s">View your site</a>, or <a href="%2$s">check out all your new posts</a>.', 'keyring' ), get_option( 'home' ), admin_url( 'edit.php' ) ) . '</h3>';
+		echo '<h3>' . sprintf( __( 'All done. <a href="%1$s">View your site</a>, or <a href="%2$s">check out all your new posts</a>.', 'keyring' ), home_url(), add_query_arg( 'keyring_services', $this->taxonomy->slug, admin_url( 'edit.php' ) ) ) . '</h3>';
 		$this->footer();
 		do_action( 'import_done', 'keyring_' . static::SLUG );
 		do_action( 'keyring_import_done', 'keyring_' . static::SLUG );
