@@ -195,6 +195,23 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			else
 				$geo = array();
 
+			// Look for images
+			$images = array();
+			if ( !empty( $post->entities->media ) ) {
+				foreach ( $post->entities->media as $media ) {
+					// The URL to the image
+					$url = $media->media_url;
+
+					// Look for a bigger size if available
+					foreach ( array( 'large', 'medium' ) as $size ) {
+						if ( !empty( $media->sizes->{$size} ) ) {
+							$url .= ":$size";
+						}
+					}
+					$images[] = $url;
+				}
+			}
+
 			// Get a GUID from Twitter, plus other important IDs to store in postmeta later
 			$user = $this->service->get_token()->get_meta( 'username' );
 			$twitter_id              = $post->id_str;
@@ -222,7 +239,8 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				'in_reply_to_user_id',
 				'in_reply_to_screen_name',
 				'in_reply_to_status_id',
-				'twitter_raw'
+				'twitter_raw',
+				'images'
 			);
 		}
 	}
@@ -278,6 +296,13 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				}
 
 				add_post_meta( $post_id, 'raw_import_data', json_encode( $twitter_raw ) );
+
+				if ( ! empty( $images ) ) {
+					$images = array_reverse( $images ); // Reverse so they stay in order when prepended
+					foreach ( $images as $image ) {
+						$this->sideload_media( $image, $post_id, $post, apply_filters( 'keyring_twitter_importer_image_embed_size', 'full' ) );
+					}
+				}
 
 				$imported++;
 
