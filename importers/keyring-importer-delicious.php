@@ -171,7 +171,7 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 				if ( count( $tags ) )
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 
-				add_post_meta( $post_id, 'raw_import_data', json_encode( $delicious_raw ) );
+				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $delicious_raw ) ) );
 
 				$imported++;
 

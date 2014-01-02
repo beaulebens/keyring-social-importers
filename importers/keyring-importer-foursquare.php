@@ -219,7 +219,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 					add_post_meta( $post_id, 'geo_public', 1 );
 				}
 
-				add_post_meta( $post_id, 'raw_import_data', json_encode( $foursquare_raw ) );
+				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $foursquare_raw ) ) );
 
 				if ( ! empty( $photos ) ) {
 					$photos = array_reverse( $photos ); // Reverse so they stay in order when prepended

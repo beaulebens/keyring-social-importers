@@ -211,7 +211,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 					add_post_meta( $post_id, 'geo_public', 1 );
 				}
 
-				add_post_meta( $post_id, 'raw_import_data', json_encode( $instagram_raw ) );
+				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $instagram_raw ) ) );
 
 				$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
 

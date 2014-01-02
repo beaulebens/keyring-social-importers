@@ -252,7 +252,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				}
 
 				if ( $tripit_raw )
-					add_post_meta( $post_id, 'raw_import_data', json_encode( $tripit_raw ) );
+					add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $tripit_raw ) ) );
 
 				$imported++;
 

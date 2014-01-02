@@ -295,7 +295,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 					add_post_meta( $post_id, 'geo_public', 1 );
 				}
 
-				add_post_meta( $post_id, 'raw_import_data', json_encode( $twitter_raw ) );
+				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $twitter_raw ) ) );
 
 				if ( ! empty( $images ) ) {
 					$images = array_reverse( $images ); // Reverse so they stay in order when prepended
