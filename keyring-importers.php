@@ -3,7 +3,7 @@
 Plugin Name: Keyring Social Importers
 Description: Take back your content from different social media websites like Twitter, Flickr, Instagram, Delicious and Foursquare. Store everything in your own WordPress so that you can use it however you like.
 Plugin URL: http://dentedreality.com.au/projects/wp-keyring-importers/
-Version: 1.4
+Version: 1.4.1
 Author: Beau Lebens
 Author URI: http://dentedreality.com.au
 */
@@ -405,7 +405,7 @@ abstract class Keyring_Importer_Base {
 					<?php $service->token_select_box( static::SLUG . '_token', true ); ?>
 					<input type="submit" name="connect_existing" value="<?php echo esc_attr( __( 'Continue&hellip;', 'keyring' ) ); ?>" id="connect_existing" class="button-primary" />
 				<?php else : ?>
-					<p><?php echo esc_html( sprintf( __( "To get started, we'll need to connect to your %s account so that we can access your tweets.", 'keyring' ), static::LABEL ) ); ?></p>
+					<p><?php echo esc_html( sprintf( __( "To get started, we'll need to connect to your %s account so that we can access your content.", 'keyring' ), static::LABEL ) ); ?></p>
 					<input type="submit" name="create_new" value="<?php echo esc_attr( sprintf( __( 'Connect to %s&#0133;', 'keyring' ), static::LABEL ) ); ?>" id="create_new" class="button-primary" />
 				<?php endif; ?>
 			</form>
@@ -517,15 +517,15 @@ abstract class Keyring_Importer_Base {
 					<td>
 						<select name="author" id="author">
 							<?php
-								$prev_author = get_option( 'author' );
-								$authors = get_users();
+								$prev_author = $this->get_option( 'author' );
+								$authors = array_merge(
+									get_users( array( 'role' => 'author' ) ),
+									get_users( array( 'role' => 'editor' ) ),
+									get_users( array( 'role' => 'administrator' ) )
+								);
 								foreach ( $authors as $user ) {
 									$author = new WP_User( $user->ID );
-									// Only list users who are allowed to publish, and default to the current user
-									if ( !$author->has_cap( 'publish_posts' ) ) {
-										continue;
-									}
-									printf( '<option value="%s"' . selected( $prev_author == $author->ID ) . '>%s</option>', $author->ID, $author->user_nicename );
+									printf( '<option value="%s"' . selected( $prev_author == $user->ID ) . '>%s</option>', $author->ID, $author->display_name ? $author->display_name : $author->user_nicename );
 								}
 							?>
 						</select>
@@ -706,7 +706,7 @@ abstract class Keyring_Importer_Base {
 				if ( next_counter <= 0 ) {
 					if ( jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).length ) {
 						jQuery( "#<?php echo esc_js( static::SLUG ); ?>-import input[type='submit']" ).hide();
-						var str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="<?php echo esc_url( admin_url( 'images/loading.gif' ) ); ?>" alt="" id="processing" align="top" width="16" height="16" />';
+						var str = '<?php _e( 'Continuing', 'keyring' ); ?> <img src="<?php echo esc_url( admin_url( '/images/loading.gif' ) ); ?>" alt="" id="processing" align="top" width="16" height="16" />';
 						jQuery( '#auto-message' ).html( str );
 						jQuery( '#<?php echo esc_js( static::SLUG ); ?>-import' ).submit();
 						return;
