@@ -69,11 +69,12 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 		// If we have already imported some, then import around that
 		if ( $latest ) {
-			$id = get_post_meta( $latest[0]->ID, 'instagram_id', true );
-			if ( $this->auto_import )
-				$url = add_query_arg( 'min_id', $id + 1, $url );
-			else
-				$url = add_query_arg( 'max_id', $id, $url );
+			$latest_timestamp = mysql2date( 'G', $latest[0]->post_date_gmt );
+			if ( $this->auto_import ) {
+				$url = add_query_arg( 'min_timestamp', $latest_timestamp + 1, $url );
+			} else {
+				$url = add_query_arg( 'max_timestamp', $latest_timestamp, $url );
+			}
 		}
 
 		return $url;
