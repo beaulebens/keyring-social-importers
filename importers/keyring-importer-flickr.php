@@ -97,7 +97,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			'media',
 			'url_o'
 		);
-		$url = "http://api.flickr.com/services/rest/?";
+		$url = "https://api.flickr.com/services/rest/?";
 		$params = array(
 			'method'         => 'flickr.people.getPhotos',
 			'api_key'        => $this->service->key,
