@@ -183,7 +183,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			// Get a GUID from Flickr, plus other important IDs to store in postmeta later
 			$flickr_id   = $post->id;
 			$flickr_img  = $post->url_o;
-			$flickr_url  = "http://www.flickr.com/photos/{$post->ownername}/{$post->id}/";
+			$flickr_url  = "http://www.flickr.com/photos/{$post->owner}/{$post->id}/"; // Use 'owner' (user-id) because it always works
 			$post_author = $this->get_option( 'author' );
 			$post_status = 'publish';
 
