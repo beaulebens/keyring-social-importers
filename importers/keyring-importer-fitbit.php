@@ -201,6 +201,6 @@ add_action( 'init', function() {
 		'fitbit',
 		'Keyring_Fitbit_Importer',
 		plugin_basename( __FILE__ ),
-		__( '<strong>Import your daily activities as single Posts, marked with the "status" format. You can also use the data as part of other maps or whatever else you\'d like to do with it.', 'keyring' )
+		__( 'Import your daily activities as single Posts, marked with the "status" format. You can also use the data as part of other maps or whatever else you\'d like to do with it.', 'keyring' )
 	);
 } );
