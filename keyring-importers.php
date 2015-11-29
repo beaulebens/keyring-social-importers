@@ -816,9 +816,13 @@ abstract class Keyring_Importer_Base {
 					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
 				}
 
+				// Update the attachment to share publish details with the post it's attached to
 				$attachments[0]->post_date_gmt = $post['post_date_gmt'];
 				$attachments[0]->post_date = $post['post_date'];
 				wp_update_post( (array) $attachments[0] );
+
+				// Set this image as the Featured Image for the post
+				set_post_thumbnail( $post_id, $attachments[0]->ID );
 			}
 
 			// Regex out the previous img tag, put this one in there instead, or prepend it to the top
