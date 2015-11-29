@@ -9,7 +9,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 	const SLUG              = 'tripit';    // e.g. 'twitter' (should match a service in Keyring)
 	const LABEL             = 'TripIt';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = 'Keyring_Service_TripIt';    // Full class name of the Keyring_Service this importer requires
-	const REQUESTS_PER_LOAD = 1;     // How many remote requests should be made before reloading the page?
+	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const MIN_HOURS_GAP     = 24; // Number of hours required to trigger a new "flight grouping" (and Post)
 
 	var $auto_import = false;
@@ -44,9 +44,27 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 	function build_request_url() {
 		// Base request URL - http://tripit.github.com/api/doc/v1/index.html
-		// Because we want to go for the AirObjects, it's actually easier to just do this request
-		// and get all the data, every time. Internal de-duping will clear out anything we already have.
 		$url = "https://api.tripit.com/v1/list/object/past/true/type/air";
+
+		// This is the "page" of results we're after
+		$get_page = $this->get_option( 'page', 1 );
+
+		// See if we know what our max_page is yet, which means we've
+		// done at least one paged request already. If we know it, don't exceed it.
+		if ( $max_page = $this->get_option( 'max_page', false ) ) {
+			$get_page = $max_page > $get_page ? $get_page : $max_page;
+		}
+		$this->set_option( 'page', $get_page );
+
+		// Now load trip details in pages of 25
+		$url = add_query_arg(
+			array(
+				'page_num'  => $get_page,
+				'page_size' => 25,
+			),
+			$url
+		);
+
 		return $url;
 	}
 
@@ -64,12 +82,21 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 			return;
 		}
 
+		// Keep track of the maximum number of pages worth of results available
+		if ( ! empty( $importdata->max_page ) ) {
+			$this->set_option( 'max_page', $importdata->max_page );
+		}
+
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata->AirObject as $trip ) {
 			// We are likely to create at least 2 (there and back) posts per trip
 			$trip_posts = array();
 
 			// Each trip is made up of a series of segments, some of which are compiled into single posts
+			if ( ! is_object( $trip ) || ! property_exists( $trip, 'Segment' ) ) {
+				continue;
+			}
+
 			$prev_end = 0;
 			$post_title = '';
 			for ( $s = 0; $s < count( $trip->Segment ); $s++ ) {
@@ -247,12 +274,13 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 				// Store geodata if it's available
 				if ( !empty( $geo_polyline ) ) {
-					add_post_meta( $post_id, 'geo_polyline', json_encode( $geo_polyline ) );
+					add_post_meta( $post_id, 'geo_polyline', wp_slash( json_encode( $geo_polyline ) ) );
 					add_post_meta( $post_id, 'geo_public', 1 );
 				}
 
-				if ( $tripit_raw )
+				if ( $tripit_raw ) {
 					add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $tripit_raw ) ) );
+				}
 
 				$imported++;
 
@@ -261,7 +289,9 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 		}
 		$this->posts = array();
 
-		$this->finished = true;
+		if ( $this->get_option( 'page', 1 ) >= $this->get_option( 'max_page' ) ) {
+			$this->finished = true;
+		}
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
@@ -269,7 +299,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 	/**
 	 * The parent class creates an hourly cron job to run auto import. That's unnecessarily aggressive for
-	 * TripIt, so we're going to cut that downt to once every 12 hours by just skipping the job depending
+	 * TripIt, so we're going to cut that down to once every 12 hours by just skipping the job depending
 	 * on the hour. If we want to run, then call the parent auto_import.
 	 */
 	function do_auto_import() {
