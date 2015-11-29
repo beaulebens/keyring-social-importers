@@ -117,8 +117,9 @@ abstract class Keyring_Importer_Base {
 		}
 
 		// Make sure we have a scheduled job to handle auto-imports if enabled
-		if ( $this->get_option( 'auto_import' ) && !wp_get_schedule( 'keyring_' . static::SLUG . '_import_auto' ) )
+		if ( $this->get_option( 'auto_import' ) && !wp_get_schedule( 'keyring_' . static::SLUG . '_import_auto' ) ) {
 			wp_schedule_event( time(), 'hourly', 'keyring_' . static::SLUG . '_import_auto' );
+		}
 
 		// Form handling here, pre-output (in case we need to redirect etc)
 		$this->handle_request();
@@ -791,7 +792,7 @@ abstract class Keyring_Importer_Base {
 	 * This is a helper for downloading/attaching/inserting media into a post when it's
 	 * being imported. See Flickr/Instagram for examples
 	 */
-	function sideload_media( $url, $post_id, $post, $size = 'large' ) {
+	function sideload_media( $urls, $post_id, $post, $size = 'large', $append = false ) {
 		if ( !function_exists( 'media_sideload_image' ) )
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		if ( !function_exists( 'download_url' ) )
@@ -799,37 +800,48 @@ abstract class Keyring_Importer_Base {
 		if ( !function_exists( 'wp_read_image_metadata' ) )
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$img = media_sideload_image( $url, $post_id, $post['post_title'] );
-		if ( is_string( $img ) ) { // returns an image tag
-			// Build a new string using a Large sized image
+		if ( ! is_array( $urls ) ) {
+			$urls = array( $urls );
+		}
+
+		$do_update = false;
+		foreach( $urls as $url ) {
+			$img = media_sideload_image( $url, $post_id, $post['post_title'] );
+			if ( is_string( $img ) ) {
+				$do_update = true;
+			}
+		}
+
+		if ( true === $do_update ) {
 			$attachments = get_posts(
 				array(
-					'post_parent' => $post_id,
-					'post_type' => 'attachment',
+					'post_parent'    => $post_id,
+					'post_type'      => 'attachment',
 					'post_mime_type' => 'image',
 				)
 			);
 
-			if ( $attachments ) { // @todo Only handles a single attachment
-				$data = wp_get_attachment_image_src( $attachments[0]->ID, $size );
-				if ( $data ) {
-					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
-				}
-
-				// Update the attachment to share publish details with the post it's attached to
-				$attachments[0]->post_date_gmt = $post['post_date_gmt'];
-				$attachments[0]->post_date = $post['post_date'];
-				wp_update_post( (array) $attachments[0] );
-
-				// Set this image as the Featured Image for the post
+			if ( $attachments ) {
+				// Set the first image as the Featured Image for this post
 				set_post_thumbnail( $post_id, $attachments[0]->ID );
-			}
 
-			// Regex out the previous img tag, put this one in there instead, or prepend it to the top
-			if ( stristr( $post['post_content'], '<img' ) )
-				$post['post_content'] = preg_replace( '!<img[^>]*>!i', $img, $post['post_content'] );
-			else
-				$post['post_content'] = $img . "\n\n" . $post['post_content'];
+				// Re-embed the sideloaded version of each image
+				foreach( $attachments as $key => $image ) {
+					$data = wp_get_attachment_image_src( $image->ID, $size );
+					if ( $data ) {
+						$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
+					}
+
+					// Regex out the previous img tag, put this one in there instead, or prepend it to the top
+					if ( stristr( $post['post_content'], $url ) ) {
+						$post['post_content'] = preg_replace( '!<img\s[^>]*src=[\'"]' . preg_quote( $url ) . '[\'"][^>]*>!', $img, $post['post_content'] ) . "\n";
+					} else if ( $append ) {
+						$post['post_content'] = $post['post_content'] . "\n\n" .  $img;
+					} else {
+						$post['post_content'] = $img . "\n\n" . $post['post_content'];
+					}
+				}
+			}
 
 			$post['ID'] = $post_id;
 			wp_update_post( $post );
