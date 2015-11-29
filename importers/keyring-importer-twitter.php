@@ -82,10 +82,11 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		// Base request URL
 		$url = "https://api.twitter.com/1.1/statuses/user_timeline.json?";
 		$params = array(
-			'user_id' => $this->get_option( 'user_id' ),
-			'trim_user' => 'true',
-			'count' => 75, // More than this and Twitter seems to get flaky
-			'include_entities' => 'true',
+			'user_id'             => $this->get_option( 'user_id' ),
+			'trim_user'           => 'false',
+			'count'               => 75, // More than this and Twitter seems to get flaky
+			'include_entities'    => 'true',
+			'contributor_details' => 'true',
 		);
 		if ( false == $this->get_option( 'include_replies' ) )
 			$params['exclude_replies'] = 'true';
@@ -167,49 +168,47 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
-			// Clean up content a bit
 			$post_content = $post->text;
+
+			// Better content for retweets
+			if ( !empty( $post->retweeted_status ) ) {
+				$post_content = $post->retweeted_status->text;
+			}
+
+			// Clean up post content for insertion
 			$post_content = esc_sql( html_entity_decode( trim( $post_content ) ) );
 
-			// Handle entities supplied by Twitter
-			if ( count( $post->entities->urls ) ) {
-				foreach ( $post->entities->urls as $url ) {
-					$post_content = str_replace( $url->url, $url->expanded_url, $post_content );
+			// Grab any images associated with this tweet
+			$images = false;
+			$extended_media = array();
+			if ( !empty( $post->extended_entities->media ) ) {
+				$images = array();
+				foreach ( $post->extended_entities->media as $image ) {
+					$img_url = $image->media_url_https;
+					if ( ! empty( $image->sizes->large ) ) {
+						$img_url .= ':large'; // Use biggest available
+					}
+					$images[] = $img_url;
 				}
 			}
 
 			// Any hashtags used in a tweet will be applied to the Post as tags in WP
 			$tags = $this->get_option( 'tags' );
-			if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post_content, $tag ) )
+			if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post_content, $tag ) ) {
 				$tags = array_merge( $tags, $tag[2] );
+			}
 
 			// Add HTML links to URLs, usernames and hashtags
 			$post_content = make_clickable( esc_html( $post_content ) );
 
 			// Include geo Data (if provided by Twitter)
-			if ( !empty( $post->geo ) && 'point' == strtolower( $post->geo->type ) )
+			if ( !empty( $post->geo ) && 'point' == strtolower( $post->geo->type ) ) {
 				$geo = array(
 					'lat' => $post->geo->coordinates[0],
 					'long' => $post->geo->coordinates[1]
 				);
-			else
+			} else {
 				$geo = array();
-
-			// Look for images
-			$images = array();
-			if ( !empty( $post->entities->media ) ) {
-				foreach ( $post->entities->media as $media ) {
-					// The URL to the image
-					$url = $media->media_url;
-
-					// Look for a bigger size if available
-					foreach ( array( 'large', 'medium' ) as $size ) {
-						if ( !empty( $media->sizes->{$size} ) ) {
-							$url .= ":$size";
-						}
-					}
-					$images[] = $url;
-				}
 			}
 
 			// Get a GUID from Twitter, plus other important IDs to store in postmeta later
