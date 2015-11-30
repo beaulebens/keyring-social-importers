@@ -3,7 +3,7 @@
 Plugin Name: Keyring Social Importers
 Description: Take back your content from different social media websites like Twitter, Flickr, Instagram, Delicious and Foursquare. Store everything in your own WordPress so that you can use it however you like.
 Plugin URL: http://dentedreality.com.au/projects/wp-keyring-importers/
-Version: 1.4.1
+Version: 1.5
 Author: Beau Lebens
 Author URI: http://dentedreality.com.au
 */

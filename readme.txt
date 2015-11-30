@@ -1,10 +1,10 @@
 === Keyring Social Importers ===
 Tags: import, sync, social, keyring, delicious, flickr, foursquare, instagram, instapaper, tripit, twitter
 Requires at least: 3.3
-Tested up to: 3.5
-Stable Tag: 1.4
+Tested up to: 4.4
+Stable Tag: 1.5
 
-Take back control of the content you are creating on other social websites.
+Import your posts/images/etc from other web services into your WordPress install. Own your content.
 
 == Description ==
 
@@ -19,10 +19,12 @@ After an initial import, all of these importers will also optionally check each 
 Importers included currently:
 
 * [Delicious](http://delicious.com/)
+* [Fitbit](http://fitbit.com/)
 * [Flickr](http://flickr.com/)
 * [Foursquare](http://foursquare.com/)
 * [Instagram](http://instagram.com/)
 * [Instapaper](http://instapaper.com/)
+* [Moves](http://moves-app.com/)
 * [TripIt](http://tripit.com/)
 * [Twitter](http://twitter.com/)
 
@@ -48,6 +50,10 @@ You can potentially write your own importers as well, using the base class inclu
 * All imported posts are marked with the 'link' Post Format
 * delicious_id and the href/link itself are saved as custom fields
 * Tags used on Delicious are used in WordPress
+
+= Fitbit =
+* Very basic for now, just imports your data and creates a simple summary post
+* Summary post only contains a statement about how many steps you took that day
 
 = Flickr =
 * Every photo in your [Flickr](http://flickr.com/) account is downloaded (the actual, original image) and imported into your Media Library
@@ -75,10 +81,16 @@ You can potentially write your own importers as well, using the base class inclu
 * Imports your *Archived* links and creates a post for each of them (with post format of Link)
 * Uses the title from the document in Instapaper, if there is a description associated then it uses that as well
 
+= Moves =
+* Imports your data daily
+* Creates a summary post, which is a bulleted list detailing each category of activity for the day
+* Stores raw and summary data for further processing
+
 = TripIt =
 * Trips are imported, with flights mapped and posted as Status-format posts
 * Geo data is stored using something resembling the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata)
 * Posts are tagged using airport codes and city names
+* Now supports paging through the API to avoid timeouts on accounts with lots of trip data
 
 = Twitter =
 * Every [tweet](http://twitter.com/) will be downloaded as an individual Post
@@ -89,6 +101,22 @@ You can potentially write your own importers as well, using the base class inclu
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs)
 
 == Changelog ==
+= 1.5 =
+* NOTE: Update Keyring to 1.6.2 for best results
+* Bugfix: Discovered a problem with the way "raw" import data was being encoded and stored (as JSON), which rendered it (sometimes) un-encodeable. Changed to use `wp_slash()` before storing it, which means all future data is "clean". Working on a script to recover as much as possible, or you can delete old posts and re-import them, and their import data will be stored using the new approach, and thus be more accessible.
+* Enhancement: New Fitbit Importer (very basic currently)
+* Enhancement: New Moves Importer (also pretty basic)
+* Enhancement: Assigns imported media as the Featured Image on the post created to display it
+* Enhancement: Sort photos attached to Foursquare check-ins the same as the original post
+* Enhancement: Use pagination in TripIt API which makes results more reliable, and avoids timeout issues on accounts with lots of trip data
+* Enhancement: Handle multiple images on Tweets
+* Enhancement: Better handling of retweets (load full content, don't truncate), props @petermolnar
+* Enhancement: Add a filter drop-down to the Posts page so that you can filter posts by the service from which they were imported
+* Bugfix: Switch to HTTPS for Flickr (now required)
+* Bugfix: Use user-id in URLs for Flickr (more reliable)
+* Bugfix: Auto-import Instagram photos using timestamps instead of ids, which is more reliable
+
+
 = 1.4 =
 * BREAKING: Change from using a value in post meta (keyring_service) to using a custom taxonomy ('keyring_services') to reference the service a post was imported from. Entries are automatically created for all importers.
 * There is a script called 'migrate-keyring-postmeta-to-taxonomy.php' included in the plugin. Put it in the root of your WP install and run it (as many times as necessary, even if it crashes/runs out of memory) until it produces no output. That will convert all existing posts and remove their keyring_service postmeta.
