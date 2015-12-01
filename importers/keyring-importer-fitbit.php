@@ -119,7 +119,8 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 		// Construct a post body containing a text-based summary of the data.
 		$post_title    = __( 'Fitbit Summary', 'keyring' );
 
-		$post_content  = sprintf( __( 'Walked %d steps.' ), number_format_i18n( $importdata->summary->steps ) );
+		// Using %s because the formatted number has commas/periods in it
+		$post_content  = sprintf( __( 'Walked %s steps.' ), number_format_i18n( $importdata->summary->steps ) );
 
 		// Other bits
 		$post_author = $this->get_option( 'author' );
