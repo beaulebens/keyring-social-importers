@@ -209,7 +209,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'foursquare_id', $foursquare_id );
 
-				if ( count( $tags ) )
+				if ( is_array( $tags ) && count( $tags ) )
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 
 				// Store geodata if it's available
