@@ -10,7 +10,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	const LABEL             = 'Instagram';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = 'Keyring_Service_Instagram';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
-	const NUM_PER_REQUEST   = 25;     // Number of images per request to ask for
+	const NUM_PER_REQUEST   = 20;     // Number of images per request to ask for
 
 	var $auto_import = false;
 
@@ -131,8 +131,31 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Tags
 			$tags = $this->get_option( 'tags' );
-			if ( !empty( $post->tags ) )
+			if ( !empty( $post->tags ) ) {
 				$tags = array_merge( $tags, $post->tags );
+			}
+
+			// Any people mentioned in this post
+			// Relies on the People & Places plugin to store (later)
+			$people = array();
+			if ( ! empty( $post->users_in_photo ) ) {
+				foreach ( $post->users_in_photo as $user ) {
+					$people[ $user->user->username ] = array(
+						'name'    => $user->user->full_name,
+						'picture' => $user->user->profile_picture,
+						'id'      => $user->user->id
+					);
+				}
+			}
+
+			// Extract specific details of the place/venue
+			$place = array();
+			if ( !empty( $post->location ) ) {
+				$place['name']          = $post->location->name;
+				$place['geo_latitude']  = $post->location->latitude;
+				$place['geo_longitude'] = $post->location->longitude;
+				$place['id']            = $post->location->id;
+			}
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );
@@ -158,7 +181,9 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				'instagram_url',
 				'instagram_img',
 				'instagram_filter',
-				'instagram_raw'
+				'instagram_raw',
+				'people',
+				'place'
 			);
 		}
 	}
@@ -172,7 +197,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			extract( $post );
 
 			if (
-				!$instagram_id
+				! $instagram_id
 			||
 				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'instagram_id' AND meta_value = %s", $instagram_id ) )
 			||
@@ -216,6 +241,20 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 				$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
 
+				// If we found people, and have the People & Places plugin available
+				// to handle processing/storing, then store references to people against
+				// this picture as well.
+				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
+					foreach ( $people as $value => $person ) {
+						People_Places::add_person_to_post( 'instagram', $value, $person, $post_id );
+					}
+				}
+
+				// Handle linking to a global location, if People & Places is available
+				if ( ! empty( $place ) && class_exists( 'People_Places' ) ) {
+					People_Places::add_place_to_post( 'instagram', $place['id'], $place, $post_id );
+				}
+
 				$imported++;
 
 				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
@@ -224,8 +263,9 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		$this->posts = array();
 
 		// If we're doing a normal import and the last request was all skipped, then we're at "now"
-		if ( !$this->auto_import && self::NUM_PER_REQUEST == $skipped )
+		if ( !$this->auto_import && self::NUM_PER_REQUEST == $skipped ) {
 			$this->finished = true;
+		}
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );

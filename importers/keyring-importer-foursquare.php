@@ -138,12 +138,36 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'long' => $post->venue->location->lng,
 			);
 
+			// Pull out any media/photos
 			$photos = array();
-
 			if ( $post->photos->count > 0 ) {
 				foreach ( $post->photos->items as $photo ) {
 					$photos[] = $photo->prefix . "original" . $photo->suffix;
 				}
+			}
+
+			// Any people associated with this check-in
+			// Relies on the People & Places plugin to store (later)
+			$people = array();
+			if ( ! empty( $post->with ) ) {
+				foreach ( $post->with as $with ) {
+					if ( empty( $with->lastName ) ) {
+						$with->lastName = '';
+					}
+					$people[ $with->id ] = array(
+						'name' => trim( $with->firstName . ' ' . $with->lastName )
+					);
+				}
+			}
+
+			// Extract specific details of the place/venue
+			$place = array();
+			if ( !empty( $post->venue ) ) {
+				$place['name']          = $post->venue->name;
+				$place['address']       = implode( ', ', (array) $post->venue->location->formattedAddress );
+				$place['geo_latitude']  = $post->venue->location->lat;
+				$place['geo_longitude'] = $post->venue->location->lng;
+				$place['id']            = $post->venue->id;
 			}
 
 			// Other bits
@@ -165,7 +189,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'foursquare_id',
 				'tags',
 				'foursquare_raw',
-				'photos'
+				'photos',
+				'people',
+				'place'
 			);
 		}
 	}
@@ -209,8 +235,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'foursquare_id', $foursquare_id );
 
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Store geodata if it's available
 				if ( !empty( $geo ) ) {
@@ -226,6 +253,20 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 					foreach ( $photos as $photo ) {
 						$this->sideload_media( $photo, $post_id, $post, apply_filters( 'keyring_foursquare_importer_image_embed_size', 'full' ) );
 					}
+				}
+
+				// If we found people, and have the People & Places plugin available
+				// to handle processing/storing, then store references to people against
+				// this check-in as well.
+				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
+					foreach ( $people as $value => $person ) {
+						People_Places::add_person_to_post( 'foursquare', $value, $person, $post_id );
+					}
+				}
+
+				// Handle linking to a global location, if People & Places is available
+				if ( ! empty( $place ) && class_exists( 'People_Places' ) ) {
+					People_Places::add_place_to_post( 'foursquare', $place['id'], $place, $post_id );
 				}
 
 				$imported++;

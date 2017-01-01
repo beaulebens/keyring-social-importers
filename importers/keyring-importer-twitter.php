@@ -211,6 +211,17 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				$geo = array();
 			}
 
+			// Any people mentioned in this tweet
+			// Relies on the People & Places plugin to store (later)
+			$people = array();
+			if ( ! empty( $post->entities->user_mentions ) ) {
+				foreach ( $post->entities->user_mentions as $user ) {
+					$people[ $user->screen_name ] = array(
+						'name' => trim( $user->name )
+					);
+				}
+			}
+
 			// Get a GUID from Twitter, plus other important IDs to store in postmeta later
 			$user = $this->service->get_token()->get_meta( 'username' );
 			$twitter_id              = $post->id_str;
@@ -239,7 +250,8 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				'in_reply_to_screen_name',
 				'in_reply_to_status_id',
 				'twitter_raw',
-				'images'
+				'images',
+				'people'
 			);
 		}
 	}
@@ -300,6 +312,15 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 					$images = array_reverse( $images ); // Reverse so they stay in order when prepended
 					foreach ( $images as $image ) {
 						$this->sideload_media( $image, $post_id, $post, apply_filters( 'keyring_twitter_importer_image_embed_size', 'full' ) );
+					}
+				}
+
+				// If we found people, and have the People & Places plugin available
+				// to handle processing/storing, then store references to people against
+				// this tweet as well.
+				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
+					foreach ( $people as $value => $person ) {
+						People_Places::add_person_to_post( 'twitter', $value, $person, $post_id );
 					}
 				}
 

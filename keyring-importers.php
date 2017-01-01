@@ -832,7 +832,7 @@ abstract class Keyring_Importer_Base {
 						$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
 					}
 
-					// Regex out the previous img tag, put this one in there instead, or prepend it to the top
+					// Regex out the previous img tag, put this one in there instead, or prepend it to the top/bottom, depending on $append
 					if ( stristr( $post['post_content'], $url ) ) {
 						$post['post_content'] = preg_replace( '!<img\s[^>]*src=[\'"]' . preg_quote( $url ) . '[\'"][^>]*>!', $img, $post['post_content'] ) . "\n";
 					} else if ( $append ) {
@@ -864,7 +864,7 @@ add_action( 'init', function() {
 			array(
 				'label'             => __( 'Imported From', 'keyring' ),
 				'public'            => true, // Allows you to use them in Custom Menus
-				'hierarchical'      => true,
+				'hierarchical'      => false,
 				'show_admin_column' => true,
 				'rewrite'           => array(
 											'slug' => 'service',
