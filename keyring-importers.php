@@ -520,6 +520,9 @@ abstract class Keyring_Importer_Base {
 						<select name="author" id="author">
 							<?php
 								$prev_author = $this->get_option( 'author' );
+								if ( ! $prev_author ) {
+									$prev_author = wp_get_current_user()->ID;
+								}
 								$authors = array_merge(
 									get_users( array( 'role' => 'author' ) ),
 									get_users( array( 'role' => 'editor' ) ),
@@ -727,6 +730,11 @@ abstract class Keyring_Importer_Base {
 		$this->header();
 		echo '<p>' . sprintf( __( 'Imported a total of %s posts.', 'keyring' ), number_format( $this->get_option( 'imported' ) ) ) . '</p>';
 		echo '<h3>' . sprintf( __( 'All done. <a href="%1$s">View your site</a>, or <a href="%2$s">check out all your new posts</a>.', 'keyring' ), home_url(), add_query_arg( 'keyring_services', $this->taxonomy->slug, admin_url( 'edit.php' ) ) ) . '</h3>';
+		echo '<p><a href="';
+		echo esc_url( add_query_arg( array(
+			'import' => 'pinterest',
+		), self_admin_url( 'admin.php' ) ) );
+		echo '">' . sprintf( __( '← Back to %s Importer', 'keyring' ), esc_html( static::LABEL ) ) . '</a></p>';
 		$this->footer();
 		do_action( 'import_done', 'keyring_' . static::SLUG );
 		do_action( 'keyring_import_done', 'keyring_' . static::SLUG );
