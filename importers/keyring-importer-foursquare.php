@@ -281,7 +281,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 } // end function Keyring_Foursquare_Importer
 
-
+// Register Importer
 add_action( 'init', function() {
 	Keyring_Foursquare_Importer(); // Load the class code from above
 	keyring_register_importer(
@@ -291,3 +291,36 @@ add_action( 'init', function() {
 		__( 'Download all of your Foursquare checkins as individual Posts (with a "status" post format).', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'people', array(
+			'key'   => 'foursquare',
+			'label' => __( 'Foursquare id' ),
+			'type'  => 'text',
+			'help'  => __( "This person's Foursquare id." ),
+			'table' => false,
+		) );
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'foursquare',
+			'label' => __( 'Foursquare Venue id' ),
+			'type'  => 'text',
+			'help'  => __( "Unique identifier from Foursquare (md5-looking hash)." ),
+			'table' => false,
+		) );
+
+
+		/**
+		 * Get the full URL to the Foursquare profile page for someone, based on their term_id
+		 * @param  Int $term_id The id for this person's term entry
+		 * @return String URL to their Foursquare profile, or empty string if none.
+		 */
+		function get_foursquare_url( $term_id ) {
+			if ( $user = get_term_meta( $term_id, 'people-foursquare', true ) ) {
+				$user = 'https://foursquare.com/user/' . $user; // have to use this format because we don't always have username
+			}
+			return $user;
+		}
+	}
+}, 102 );

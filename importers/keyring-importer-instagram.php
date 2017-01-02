@@ -272,7 +272,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 } // end function Keyring_Instagram_Importer
 
-
+// Register Importer
 add_action( 'init', function() {
 	Keyring_Instagram_Importer(); // Load the class code from above
 	keyring_register_importer(
@@ -282,3 +282,28 @@ add_action( 'init', function() {
 		__( 'Download copies of your Instagram photos and publish them all as individual Posts (marked as "image" format).', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'people', array(
+			'key'   => 'instagram',
+			'label' => __( 'Instagram username' ),
+			'type'  => 'text',
+			'help'  => __( "This person's Instagram username." ),
+			'table' => true,
+		) );
+
+		/**
+		 * Get the full URL to the Instagram profile page for someone, based on their term_id
+		 * @param  Int $term_id The id for this person's term entry
+		 * @return String URL to their Instagram profile, or empty string if none.
+		 */
+		function get_instagram_url( $term_id ) {
+			if ( $user = get_term_meta( $term_id, 'people-instagram', true ) ) {
+				$user = 'https://instagram.com/' . $user;
+			}
+			return $user;
+		}
+	}
+}, 101 );

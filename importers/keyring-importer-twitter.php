@@ -336,7 +336,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 } // end function Keyring_Twitter_Importer
 
-
+// Register Importer
 add_action( 'init', function() {
 	Keyring_Twitter_Importer(); // Load the class code from above
 	keyring_register_importer(
@@ -346,3 +346,36 @@ add_action( 'init', function() {
 		__( 'Import all of your tweets from Twitter as Posts (marked as "asides") in WordPress.', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'people', array(
+			'key'   => 'twitter',
+			'label' => __( 'Twitter screen name' ),
+			'type'  => 'text',
+			'help'  => __( "This person's Twitter screen/user name (without the '@')." ),
+			'table' => true,
+		) );
+
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'twitter',
+			'label' => __( 'Twitter Location id' ),
+			'type'  => 'text',
+			'help'  => __( "Unique identifier from Twitter, for this location." ),
+			'table' => false,
+		) );
+
+		/**
+		 * Get the full URL to the Twitter profile page for someone, based on their term_id
+		 * @param  Int $term_id The id for this person's term entry
+		 * @return String URL to their Twitter profile, or empty string if none.
+		 */
+		function ksi_get_twitter_url( $term_id ) {
+			if ( $user = get_term_meta( $term_id, 'people-twitter', true ) ) {
+				$user = 'https://twitter.com/' . $user;
+			}
+			return $user;
+		}
+	}
+}, 100 );
