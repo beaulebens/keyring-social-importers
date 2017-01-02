@@ -72,8 +72,6 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 	}
 
 	function extract_posts_from_data( $raw ) {
-		global $wpdb;
-
 		$importdata = $raw;
 
 		if ( null === $importdata ) {

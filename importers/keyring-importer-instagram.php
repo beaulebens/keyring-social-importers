@@ -81,8 +81,6 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	}
 
 	function extract_posts_from_data( $raw ) {
-		global $wpdb;
-
 		$importdata = $raw;
 
 		if ( null === $importdata ) {
@@ -263,7 +261,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		$this->posts = array();
 
 		// If we're doing a normal import and the last request was all skipped, then we're at "now"
-		if ( !$this->auto_import && self::NUM_PER_REQUEST == $skipped ) {
+		if ( ! $this->auto_import && self::NUM_PER_REQUEST == $skipped ) {
 			$this->finished = true;
 		}
 
