@@ -14,6 +14,33 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 	var $auto_import = false;
 
+	function __construct() {
+		parent::__construct();
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'instagram-people' ] = array(
+					'label'       => __( 'People tagged or mentioned on Instagram', 'keyring' ),
+					'description' => __( 'Identify People tagged directly in your Instagram photos, or @mentioned in your captions, and assign them via taxonomy.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_people' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'instagram-places' ] = array(
+					'label'       => __( 'Places you posted from on Instagram', 'keyring' ),
+					'description' => __( 'Check your Instagram photos for tagged locations, and reference them locally as Places.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_places' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+	}
+
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
@@ -148,7 +175,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Extract specific details of the place/venue
 			$place = array();
-			if ( !empty( $post->location ) ) {
+			if ( ! empty( $post->location ) ) {
 				$place['name']          = $post->location->name;
 				$place['geo_latitude']  = $post->location->latitude;
 				$place['geo_longitude'] = $post->location->longitude;
@@ -229,7 +256,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 
 				// Store geodata if it's available
-				if ( !empty( $geo ) ) {
+				if ( ! empty( $geo ) ) {
 					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
 					add_post_meta( $post_id, 'geo_public', 1 );
@@ -244,13 +271,13 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				// this picture as well.
 				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
 					foreach ( $people as $value => $person ) {
-						People_Places::add_person_to_post( 'instagram', $value, $person, $post_id );
+						People_Places::add_person_to_post( static::SLUG, $value, $person, $post_id );
 					}
 				}
 
 				// Handle linking to a global location, if People & Places is available
 				if ( ! empty( $place ) && class_exists( 'People_Places' ) ) {
-					People_Places::add_place_to_post( 'instagram', $place['id'], $place, $post_id );
+					People_Places::add_place_to_post( static::SLUG, $place['id'], $place, $post_id );
 				}
 
 				$imported++;
@@ -268,6 +295,102 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
 	}
+
+	/**
+	 * Reprocess a $post and identify/link up People.
+	 */
+	function reprocess_people( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Users in Photo
+		if ( ! empty( $raw->users_in_photo ) ) {
+			foreach ( $raw->users_in_photo as $user ) {
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$user->user->username,
+					array(
+						'name' => trim( $user->user->full_name ),
+						'id'   => $user->user->id
+					),
+					$post->ID
+				);
+			}
+		}
+
+		// Mentions in captions
+		if ( ! empty( $raw->caption->text ) && stristr( $raw->caption->text, '@' ) ) {
+			preg_match_all( '/(^|[(\[\s\.])?@(\w+)/', $raw->caption->text, $matches );
+			foreach ( (array) $matches[2] as $match ) {
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$match,
+					array(
+						'name' => trim( $match )
+					),
+					$post->ID
+				);
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Check posts for Places, and update accordingly. Instagram
+	 * only gives us geo-data, no addresses.
+	 */
+	function reprocess_places( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Places
+		if (
+			! empty( $raw->location )
+		&&
+			! empty( $raw->location->name )
+		&&
+			! empty( $raw->location->latitude )
+		&&
+			! empty( $raw->location->longitude )
+		) {
+			$place = array();
+			$place['name']          = $raw->location->name;
+			$place['geo_latitude']  = $raw->location->latitude;
+			$place['geo_longitude'] = $raw->location->longitude;
+
+			if ( ! empty( $raw->location->id ) ) {
+				$place['id'] = $raw->location->id;
+			}
+
+			People_Places::add_place_to_post(
+				static::SLUG,
+				$place['id'],
+				$place,
+				$post->ID
+			);
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+		}
 }
 
 } // end function Keyring_Instagram_Importer

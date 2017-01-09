@@ -16,6 +16,20 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	function __construct() {
 		parent::__construct();
 		add_action( 'keyring_importer_twitter_custom_options', array( $this, 'custom_options' ) );
+		add_action( 'keyring_importer_twitter_footer', array( $this, 'custom_options' ) );
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'twitter-people' ] = array(
+					'label'       => __( 'People mentioned in Tweets, or retweeted', 'keyring' ),
+					'description' => __( 'Identify People mentioned/retweeted in your tweets, and assign them via taxonomy.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_people' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
 	}
 
 	function custom_options() {
@@ -37,7 +51,29 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		</tr><?php
 	}
 
+	function footer() {
+		if ( !class_exists( 'People_Places' ) ) {
+			return;
+		}
+
+		?><hr />
+		<form method="get" action="admin.php">
+			<input type="hidden" name="import" value="<?php esc_attr_e( static::SLUG ); ?>" />
+			<input type="hidden" name="step" value="options" />
+			<p><strong><?php _e( 'Advanced Tools' ); ?></strong></p>
+			<p><input type="submit" name="repro-people" id="repro-people" value="<?php _e( 'Reprocess' ); ?>" class="button" /> existing posts and update <strong>People</strong> information.</p>
+			<p><input type="submit" name="repro-places" id="repro-places" value="<?php _e( 'Reprocess' ); ?>" class="button" /> existing posts and update <strong>Places</strong> information.</p>
+		</form>
+		<?php
+	}
+
  	function handle_request_options() {
+		// Advanced Tools
+		if ( isset( $_REQUEST['repro-people'] ) ) {
+			$this->reprocess_people();
+			return;
+		}
+
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
@@ -318,7 +354,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				// this tweet as well.
 				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
 					foreach ( $people as $value => $person ) {
-						People_Places::add_person_to_post( 'twitter', $value, $person, $post_id );
+						People_Places::add_person_to_post( static::SLUG, $value, $person, $post_id );
 					}
 				}
 
@@ -331,6 +367,39 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
+	}
+
+	/**
+	 * Reprocess a $post and identify/link up People.
+	 */
+	function reprocess_people( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Mentions
+		if ( ! empty( $raw->entities->user_mentions ) ) {
+			foreach ( $raw->entities->user_mentions as $user ) {
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$user->screen_name,
+					array(
+						'name' => trim( $user->name )
+					),
+					$post->ID
+				);
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
 	}
 }
 

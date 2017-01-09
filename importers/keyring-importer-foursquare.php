@@ -13,6 +13,33 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 	var $auto_import = false;
 
+	function __construct() {
+		parent::__construct();
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-places' ] = array(
+					'label'       => __( 'Places you checked into via Foursquare/Swarm', 'keyring' ),
+					'description' => __( 'Reprocess your Swarm checkins and link up Places properly.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_places' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-people' ] = array(
+					'label'       => __( 'People you checked in with on Foursquare/Swarm', 'keyring' ),
+					'description' => __( 'If you have checked in with People on Swarm, this will identify and link them up.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_people' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+	}
+
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
@@ -258,13 +285,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				// this check-in as well.
 				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
 					foreach ( $people as $value => $person ) {
-						People_Places::add_person_to_post( 'foursquare', $value, $person, $post_id );
+						People_Places::add_person_to_post( static::SLUG, $value, $person, $post_id );
 					}
 				}
 
 				// Handle linking to a global location, if People & Places is available
 				if ( ! empty( $place ) && class_exists( 'People_Places' ) ) {
-					People_Places::add_place_to_post( 'foursquare', $place['id'], $place, $post_id );
+					People_Places::add_place_to_post( static::SLUG, $place['id'], $place, $post_id );
 				}
 
 				$imported++;
@@ -276,6 +303,95 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
+	}
+
+	/**
+	 * Reprocess a $post and identify/link up Places.
+	 */
+	function reprocess_places( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Places
+		if (
+			! empty( $raw->venue )
+		&&
+			! empty( $raw->venue->name )
+		&&
+			! empty( $raw->venue->location->lat )
+		&&
+			! empty( $raw->venue->location->lng )
+		) {
+			$place = array();
+			$place['name']          = $raw->venue->name;
+			$place['geo_latitude']  = $raw->venue->location->lat;
+			$place['geo_longitude'] = $raw->venue->location->lng;
+			$place['id']            = $raw->venue->id;
+
+			if ( ! empty( $raw->venue->location->formattedAddress ) ) {
+				$place['address'] = implode( ', ', (array) $raw->venue->location->formattedAddress );
+			}
+
+			if ( ! empty( $raw->venue->id ) ) {
+				$place['id'] = $raw->venue->id;
+			}
+
+			People_Places::add_place_to_post(
+				static::SLUG,
+				$place['id'],
+				$place,
+				$post->ID
+			);
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Reprocess a $post and identify/link up People.
+	 */
+	function reprocess_people( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Users explicitly referenced
+		if ( ! empty( $raw->with ) ) {
+			foreach ( $raw->with as $with ) {
+				if ( empty( $with->lastName ) ) {
+					$with->lastName = '';
+				}
+
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$with->id,
+					array(
+						'name' => trim( $with->firstName . ' ' . $with->lastName ),
+						'id'   => $with->id
+					),
+					$post->ID
+				);
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
 	}
 }
 
