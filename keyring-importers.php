@@ -35,8 +35,12 @@ Extend this class to write an importer, using Keyring for authentication/request
 */
 
 // Load Importer API
-if ( !function_exists( 'register_importer ' ) )
+if ( !function_exists( 'register_importer ' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/import.php';
+}
+
+// Load up the reprocessor as well
+require_once dirname( __FILE__ ) . '/reprocessor.php';
 
 abstract class Keyring_Importer_Base {
 	// Make sure you set all of these in your importer class
@@ -236,12 +240,14 @@ abstract class Keyring_Importer_Base {
 	 */
 	function handle_request() {
 		// Only interested in POST requests and specific GETs
-		if ( empty( $_GET['import'] ) || static::SLUG != $_GET['import'] )
+		if ( empty( $_GET['import'] ) || static::SLUG != $_GET['import'] ) {
 			return;
+		}
 
 		// Heading to a specific step of the importer
-		if ( !empty( $_REQUEST['step'] ) && ctype_alpha( $_REQUEST['step'] ) )
+		if ( !empty( $_REQUEST['step'] ) && ctype_alpha( $_REQUEST['step'] ) ) {
 			$this->step = (string) $_REQUEST['step'];
+		}
 
 		switch ( $this->step ) {
 		case 'greet':
@@ -357,6 +363,7 @@ abstract class Keyring_Importer_Base {
 	 * Default, basic footer for importer UI
 	 */
 	function footer() {
+		do_action( 'keyring_importer_' . static::SLUG . '_footer' );
 		echo '</div>';
 	}
 
@@ -523,6 +530,7 @@ abstract class Keyring_Importer_Base {
 								if ( ! $prev_author ) {
 									$prev_author = wp_get_current_user()->ID;
 								}
+								// Need to get specific lists to avoid problems on sites with subscriber lists and whatnot
 								$authors = array_merge(
 									get_users( array( 'role' => 'author' ) ),
 									get_users( array( 'role' => 'editor' ) ),
@@ -586,8 +594,9 @@ abstract class Keyring_Importer_Base {
 	function locate_template() {
 		$name = 'template-' . static::SLUG . '.php';
 		$template = locate_template( array( "importer-templates/$name" ) );
-		if ( !$template )
+		if ( ! $template ) {
 			$template = dirname( __FILE__ ) . "/templates/$name";
+		}
 		return $template;
 	}
 
@@ -732,7 +741,7 @@ abstract class Keyring_Importer_Base {
 		echo '<h3>' . sprintf( __( 'All done. <a href="%1$s">View your site</a>, or <a href="%2$s">check out all your new posts</a>.', 'keyring' ), home_url(), add_query_arg( 'keyring_services', $this->taxonomy->slug, admin_url( 'edit.php' ) ) ) . '</h3>';
 		echo '<p><a href="';
 		echo esc_url( add_query_arg( array(
-			'import' => 'pinterest',
+			'import' => static::SLUG,
 		), self_admin_url( 'admin.php' ) ) );
 		echo '">' . sprintf( __( '← Back to %s Importer', 'keyring' ), esc_html( static::LABEL ) ) . '</a></p>';
 		$this->footer();
@@ -875,8 +884,8 @@ add_action( 'init', function() {
 				'hierarchical'      => false,
 				'show_admin_column' => true,
 				'rewrite'           => array(
-											'slug' => 'service',
-										),
+					'slug' => 'service',
+				),
 				'capabilities'      => array( // we intentionally provide these because then noone will have the ability to mess with them
 											'manage_terms' => 'edit_posts',
 											'edit_terms'   => 'edit_posts',
@@ -886,7 +895,7 @@ add_action( 'init', function() {
 			)
 		);
 	}
-} );
+}, 5 );
 
 /**
  * Since we're introducing a new taxonomy, and we're likely to end up with a lot
@@ -917,16 +926,18 @@ add_action( 'restrict_manage_posts', function() {
 function keyring_register_importer( $slug, $class, $plugin, $info = false ) {
 	global $_keyring_importers;
 	$slug = preg_replace( '/[^a-z_]/', '', $slug );
-	$_keyring_importers[$slug] = call_user_func( array( $class, 'init' ) );
-	if ( !$info )
+	$_keyring_importers[ $slug ] = call_user_func( array( $class, 'init' ) );
+	if ( ! $info ) {
 		$info = __( 'Import content from %s and save it as Posts within WordPress.', 'keyring' );
+	}
 
 	$name = $class::LABEL;
 
 	// Check if this importer is already configured to auto-import
 	$options = get_option( 'keyring_' . $slug . '_importer' );
-	if ( !empty( $options['auto_import'] ) && !empty( $options['token'] ) )
-		$name = '&#10003; ' . $name;
+	if ( ! empty( $options['auto_import'] ) && ! empty( $options['token'] ) ) {
+		$name = '&#10003; ' . $name; // Add a checkmark to indiciate it's on auto
+	}
 
 	register_importer(
 		$slug,
@@ -942,8 +953,10 @@ function keyring_register_importer( $slug, $class, $plugin, $info = false ) {
 	add_action( 'keyring_' . $class::SLUG . '_import_auto', array( $_keyring_importers[$slug], 'do_auto_import' ) );
 }
 
+// Auto-load all importers available (unless filtered)
 $keyring_importers = glob( dirname( __FILE__ ) . "/importers/*.php" );
 $keyring_importers = apply_filters( 'keyring_importers', $keyring_importers );
-foreach ( $keyring_importers as $keyring_importer )
-	require $keyring_importer;
+foreach ( $keyring_importers as $keyring_importer ) {
+	require_once $keyring_importer;
+}
 unset( $keyring_importers, $keyring_importer );
