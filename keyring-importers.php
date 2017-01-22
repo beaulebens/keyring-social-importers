@@ -345,6 +345,7 @@ abstract class Keyring_Importer_Base {
 			.keyring-importer ol { margin: 1em 2em; }
 			.keyring-importer li { list-style-type: square; }
 			#auto-message { margin-left: 10px; }
+			<?php echo do_action( 'keyring_importer_header_css' ); ?>
 		</style>
 		<div class="wrap keyring-importer">
 		<?php screen_icon(); ?>
