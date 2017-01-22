@@ -205,8 +205,12 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 		return array( 'imported' => $imported, 'skipped' => $skipped );
 	}
 
-	// Download article content in batches, and store in post-meta/custom fields
+	// Download article content in batches, and store in post-meta/custom field
 	function download_article_texts() {
+		if ( ! apply_filters( 'keyring_instapaper_download_article_texts', true ) ) {
+			return;
+		}
+
 		// Returns the specified bookmark's processed text-view HTML, which is always text/html encoded as UTF-8.
 		$endpoint = 'https://www.instapaper.com/api/1/bookmarks/get_text';
 
