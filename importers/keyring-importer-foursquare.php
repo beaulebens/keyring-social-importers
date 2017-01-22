@@ -189,10 +189,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			$place = array();
 			if ( !empty( $post->venue ) ) {
 				$place['name']          = $post->venue->name;
-				$place['address']       = implode( ', ', (array) $post->venue->location->formattedAddress );
 				$place['geo_latitude']  = $post->venue->location->lat;
 				$place['geo_longitude'] = $post->venue->location->lng;
 				$place['id']            = $post->venue->id;
+
+				if ( ! empty( $post->venue->location->formattedAddress ) ) {
+					$place['address'] = implode( ', ', (array) $post->venue->location->formattedAddress );
+				}
 			}
 
 			// Other bits
