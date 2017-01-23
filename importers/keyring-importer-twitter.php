@@ -16,7 +16,6 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	function __construct() {
 		parent::__construct();
 		add_action( 'keyring_importer_twitter_custom_options', array( $this, 'custom_options' ) );
-		add_action( 'keyring_importer_twitter_footer', array( $this, 'custom_options' ) );
 
 		// If we have People & Places available, then allow re-processing old posts as well
 		if ( class_exists( 'People_Places' ) ) {
@@ -51,23 +50,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		</tr><?php
 	}
 
-	function footer() {
-		if ( !class_exists( 'People_Places' ) ) {
-			return;
-		}
-
-		?><hr />
-		<form method="get" action="admin.php">
-			<input type="hidden" name="import" value="<?php esc_attr_e( static::SLUG ); ?>" />
-			<input type="hidden" name="step" value="options" />
-			<p><strong><?php _e( 'Advanced Tools' ); ?></strong></p>
-			<p><input type="submit" name="repro-people" id="repro-people" value="<?php _e( 'Reprocess' ); ?>" class="button" /> existing posts and update <strong>People</strong> information.</p>
-			<p><input type="submit" name="repro-places" id="repro-places" value="<?php _e( 'Reprocess' ); ?>" class="button" /> existing posts and update <strong>Places</strong> information.</p>
-		</form>
-		<?php
-	}
-
- 	function handle_request_options() {
+	function handle_request_options() {
 		// Advanced Tools
 		if ( isset( $_REQUEST['repro-people'] ) ) {
 			$this->reprocess_people();
