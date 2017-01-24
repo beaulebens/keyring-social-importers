@@ -10,8 +10,6 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 	const LABEL             = 'Nest Camera'; // e.g. 'Twitter'
 	const KEYRING_SERVICE   = 'Keyring_Service_Nest'; // Full class name of the Keyring_Service this importer requires
 
-	var $auto_import = false;
-
 	function __construct() {
 		parent::__construct();
 
@@ -46,6 +44,16 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 			$_POST['auto_import'] = false;
 		}
 
+		if ( isset( $_POST['auto_tag'] ) ) {
+			$_POST['auto_tag'] = true;
+		} else {
+			$_POST['auto_tag'] = false;
+		}
+
+		if ( ! isset( $_POST['schedule'] ) ) {
+			$_POST['schedule'] = array();
+		}
+
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
 			$this->step = 'options';
@@ -55,6 +63,7 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
 				'auto_import' => $_POST['auto_import'],
+				'auto_tag'    => $_POST['auto_tag'],
 				'schedule'    => $_POST['schedule'], // array of camera_id=>hours
 			) );
 
@@ -68,6 +77,10 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 			$meta = array();
 		} else {
 			if ( ! empty( $response->devices->cameras ) ) {
+				echo '<tr><th>' . __( 'Auto-tag with cameras/structures', 'keyring' ) . '</th>';
+				echo '<td><input type="checkbox" name="auto_tag" value="1" ' . checked( $this->get_option( 'auto_tag', true ), true, false ) . '/></td>';
+				echo '</tr>';
+
 				$schedule = $this->get_option( 'schedule' );
 				$label    = array();
 				echo '<tr><th>' . __( 'Cameras' ) . '</th><td>';
@@ -154,12 +167,13 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				$camera = $importdata->devices->cameras->{$camera};
 			}
 
-			// Check the schedule for this camera, and skip if we don't want a snapshot this hour
-			// If we're doing a manual refresh, then just grab one for anything that has any schedule
+			// Always skip this camera if it has no scheduled times
 			if ( ! count( $times ) ) {
 				continue;
 			}
-			if ( ! isset( $_REQUEST['refresh'] ) && ! in_array( current_time( 'G' ), $times ) ) {
+
+			// If we're not doing a manual regresh, and this one is not scheduled for this hour, skip
+			if ( ! isset( $_POST['refresh'] ) && ! in_array( current_time( 'G' ), $times ) ) {
 				continue;
 			}
 
@@ -173,7 +187,24 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
+			// Pass the URL so we can grab it later
 			$nest_img = $camera->snapshot_url;
+
+			// Use the camera/structure names as tags?
+			$tags = array();
+			if ( $this->get_option( 'auto_tag' ) ) {
+				// Camera name
+				$tags[] = $camera->name;
+
+				if (
+					! empty( $camera->structure_id )
+				&&
+					! empty( $importdata->structures->{$camera->structure_id}->name )
+				) {
+					// Structure name
+					$tags[] = $importdata->structures->{$camera->structure_id}->name;
+				}
+			}
 
 			// Construct a post body. By default we'll just link to the external image.
 			// In insert_posts() we'll attempt to download/replace that with a local version.
@@ -194,7 +225,8 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				'post_title',
 				'post_status',
 				'post_category',
-				'nest_img'
+				'nest_img',
+				'tags'
 			);
 		}
 	}
@@ -237,6 +269,11 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 
 				// Update Category
 				wp_set_post_categories( $post_id, $post_category );
+
+				// Tags
+				if ( count( $tags ) ) {
+					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Download and handle the image. We have to do this pretty manually
 				// because Nest has weird URLs, so they trip up all of WordPress' security
