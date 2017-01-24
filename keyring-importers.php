@@ -59,6 +59,7 @@ abstract class Keyring_Importer_Base {
 	var $posts              = array();
 	var $errors             = array();
 	var $request_method     = 'GET';
+	var $auto_import        = false;
 
 	function __construct() {
 		// Can't do anything if Keyring is not available.

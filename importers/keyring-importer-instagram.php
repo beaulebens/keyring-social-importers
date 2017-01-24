@@ -12,8 +12,6 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
 	const NUM_PER_REQUEST   = 20;     // Number of images per request to ask for
 
-	var $auto_import = false;
-
 	function __construct() {
 		parent::__construct();
 

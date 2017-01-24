@@ -12,8 +12,6 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 3; // How many remote requests should be made before reloading the page?
 	const NUM_PER_REQUEST   = 50; // Number of pins per request to ask for
 
-	var $auto_import = false;
-
 	// @todo: Allow selection of a single board to import from
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports

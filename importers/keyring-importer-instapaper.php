@@ -13,7 +13,6 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const LINKS_PER_REQUEST = 25; // How many links to request from Instapaper in each request
 
-	var $auto_import        = false;
 	var $request_method     = 'POST';
 
 	function __construct() {
