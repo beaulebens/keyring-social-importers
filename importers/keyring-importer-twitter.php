@@ -11,11 +11,22 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	const KEYRING_SERVICE   = 'Keyring_Service_Twitter';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
 
-	var $auto_import = false;
-
 	function __construct() {
 		parent::__construct();
 		add_action( 'keyring_importer_twitter_custom_options', array( $this, 'custom_options' ) );
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'twitter-people' ] = array(
+					'label'       => __( 'People mentioned in Tweets, or retweeted', 'keyring' ),
+					'description' => __( 'Identify People mentioned/retweeted in your tweets, and assign them via taxonomy.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_people' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
 	}
 
 	function custom_options() {
@@ -37,7 +48,13 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		</tr><?php
 	}
 
- 	function handle_request_options() {
+	function handle_request_options() {
+		// Advanced Tools
+		if ( isset( $_REQUEST['repro-people'] ) ) {
+			$this->reprocess_people();
+			return;
+		}
+
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
@@ -123,8 +140,6 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	}
 
 	function extract_posts_from_data( $raw ) {
-		global $wpdb;
-
 		$importdata = $raw;
 
 		if ( null === $importdata ) {
@@ -211,6 +226,17 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				$geo = array();
 			}
 
+			// Any people mentioned in this tweet
+			// Relies on the People & Places plugin to store (later)
+			$people = array();
+			if ( ! empty( $post->entities->user_mentions ) ) {
+				foreach ( $post->entities->user_mentions as $user ) {
+					$people[ $user->screen_name ] = array(
+						'name' => trim( $user->name )
+					);
+				}
+			}
+
 			// Get a GUID from Twitter, plus other important IDs to store in postmeta later
 			$user = $this->service->get_token()->get_meta( 'username' );
 			$twitter_id              = $post->id_str;
@@ -239,7 +265,8 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				'in_reply_to_screen_name',
 				'in_reply_to_status_id',
 				'twitter_raw',
-				'images'
+				'images',
+				'people'
 			);
 		}
 	}
@@ -303,6 +330,15 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 					}
 				}
 
+				// If we found people, and have the People & Places plugin available
+				// to handle processing/storing, then store references to people against
+				// this tweet as well.
+				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
+					foreach ( $people as $value => $person ) {
+						People_Places::add_person_to_post( static::SLUG, $value, $person, $post_id );
+					}
+				}
+
 				$imported++;
 
 				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
@@ -313,11 +349,44 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
 	}
+
+	/**
+	 * Reprocess a $post and identify/link up People.
+	 */
+	function reprocess_people( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Mentions
+		if ( ! empty( $raw->entities->user_mentions ) ) {
+			foreach ( $raw->entities->user_mentions as $user ) {
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$user->screen_name,
+					array(
+						'name' => trim( $user->name )
+					),
+					$post->ID
+				);
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
 }
 
 } // end function Keyring_Twitter_Importer
 
-
+// Register Importer
 add_action( 'init', function() {
 	Keyring_Twitter_Importer(); // Load the class code from above
 	keyring_register_importer(
@@ -327,3 +396,36 @@ add_action( 'init', function() {
 		__( 'Import all of your tweets from Twitter as Posts (marked as "asides") in WordPress.', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'people', array(
+			'key'   => 'twitter',
+			'label' => __( 'Twitter screen name' ),
+			'type'  => 'text',
+			'help'  => __( "This person's Twitter screen/user name (without the '@')." ),
+			'table' => true,
+		) );
+
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'twitter',
+			'label' => __( 'Twitter Location id' ),
+			'type'  => 'text',
+			'help'  => __( "Unique identifier from Twitter, for this location." ),
+			'table' => false,
+		) );
+
+		/**
+		 * Get the full URL to the Twitter profile page for someone, based on their term_id
+		 * @param  Int $term_id The id for this person's term entry
+		 * @return String URL to their Twitter profile, or empty string if none.
+		 */
+		function ksi_get_twitter_url( $term_id ) {
+			if ( $user = get_term_meta( $term_id, 'people-twitter', true ) ) {
+				$user = 'https://twitter.com/' . $user;
+			}
+			return $user;
+		}
+	}
+}, 100 );

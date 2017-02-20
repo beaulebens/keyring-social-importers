@@ -11,7 +11,32 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 	const KEYRING_SERVICE   = 'Keyring_Service_Foursquare';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
 
-	var $auto_import = false;
+	function __construct() {
+		parent::__construct();
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-places' ] = array(
+					'label'       => __( 'Places you checked into via Foursquare/Swarm', 'keyring' ),
+					'description' => __( 'Reprocess your Swarm checkins and link up Places properly.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_places' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-people' ] = array(
+					'label'       => __( 'People you checked in with on Foursquare/Swarm', 'keyring' ),
+					'description' => __( 'If you have checked in with People on Swarm, this will identify and link them up.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_people' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+	}
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
@@ -72,8 +97,6 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 	}
 
 	function extract_posts_from_data( $raw ) {
-		global $wpdb;
-
 		$importdata = $raw;
 
 		if ( null === $importdata ) {
@@ -138,11 +161,38 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'long' => $post->venue->location->lng,
 			);
 
+			// Pull out any media/photos
 			$photos = array();
-
 			if ( $post->photos->count > 0 ) {
 				foreach ( $post->photos->items as $photo ) {
 					$photos[] = $photo->prefix . "original" . $photo->suffix;
+				}
+			}
+
+			// Any people associated with this check-in
+			// Relies on the People & Places plugin to store (later)
+			$people = array();
+			if ( ! empty( $post->with ) ) {
+				foreach ( $post->with as $with ) {
+					if ( empty( $with->lastName ) ) {
+						$with->lastName = '';
+					}
+					$people[ $with->id ] = array(
+						'name' => trim( $with->firstName . ' ' . $with->lastName )
+					);
+				}
+			}
+
+			// Extract specific details of the place/venue
+			$place = array();
+			if ( !empty( $post->venue ) ) {
+				$place['name']          = $post->venue->name;
+				$place['geo_latitude']  = $post->venue->location->lat;
+				$place['geo_longitude'] = $post->venue->location->lng;
+				$place['id']            = $post->venue->id;
+
+				if ( ! empty( $post->venue->location->formattedAddress ) ) {
+					$place['address'] = implode( ', ', (array) $post->venue->location->formattedAddress );
 				}
 			}
 
@@ -165,7 +215,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				'foursquare_id',
 				'tags',
 				'foursquare_raw',
-				'photos'
+				'photos',
+				'people',
+				'place'
 			);
 		}
 	}
@@ -209,8 +261,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'foursquare_id', $foursquare_id );
 
-				if ( is_array( $tags ) && count( $tags ) )
+				if ( is_array( $tags ) && count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Store geodata if it's available
 				if ( !empty( $geo ) ) {
@@ -228,6 +281,20 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 					}
 				}
 
+				// If we found people, and have the People & Places plugin available
+				// to handle processing/storing, then store references to people against
+				// this check-in as well.
+				if ( ! empty( $people ) && class_exists( 'People_Places' ) ) {
+					foreach ( $people as $value => $person ) {
+						People_Places::add_person_to_post( static::SLUG, $value, $person, $post_id );
+					}
+				}
+
+				// Handle linking to a global location, if People & Places is available
+				if ( ! empty( $place ) && class_exists( 'People_Places' ) ) {
+					People_Places::add_place_to_post( static::SLUG, $place['id'], $place, $post_id );
+				}
+
 				$imported++;
 
 				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
@@ -238,11 +305,100 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
 	}
+
+	/**
+	 * Reprocess a $post and identify/link up Places.
+	 */
+	function reprocess_places( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Places
+		if (
+			! empty( $raw->venue )
+		&&
+			! empty( $raw->venue->name )
+		&&
+			! empty( $raw->venue->location->lat )
+		&&
+			! empty( $raw->venue->location->lng )
+		) {
+			$place = array();
+			$place['name']          = $raw->venue->name;
+			$place['geo_latitude']  = $raw->venue->location->lat;
+			$place['geo_longitude'] = $raw->venue->location->lng;
+			$place['id']            = $raw->venue->id;
+
+			if ( ! empty( $raw->venue->location->formattedAddress ) ) {
+				$place['address'] = implode( ', ', (array) $raw->venue->location->formattedAddress );
+			}
+
+			if ( ! empty( $raw->venue->id ) ) {
+				$place['id'] = $raw->venue->id;
+			}
+
+			People_Places::add_place_to_post(
+				static::SLUG,
+				$place['id'],
+				$place,
+				$post->ID
+			);
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Reprocess a $post and identify/link up People.
+	 */
+	function reprocess_people( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Users explicitly referenced
+		if ( ! empty( $raw->with ) ) {
+			foreach ( $raw->with as $with ) {
+				if ( empty( $with->lastName ) ) {
+					$with->lastName = '';
+				}
+
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$with->id,
+					array(
+						'name' => trim( $with->firstName . ' ' . $with->lastName ),
+						'id'   => $with->id
+					),
+					$post->ID
+				);
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
 }
 
 } // end function Keyring_Foursquare_Importer
 
-
+// Register Importer
 add_action( 'init', function() {
 	Keyring_Foursquare_Importer(); // Load the class code from above
 	keyring_register_importer(
@@ -252,3 +408,36 @@ add_action( 'init', function() {
 		__( 'Download all of your Foursquare checkins as individual Posts (with a "status" post format).', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'people', array(
+			'key'   => 'foursquare',
+			'label' => __( 'Foursquare id' ),
+			'type'  => 'text',
+			'help'  => __( "This person's Foursquare id." ),
+			'table' => false,
+		) );
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'foursquare',
+			'label' => __( 'Foursquare Venue id' ),
+			'type'  => 'text',
+			'help'  => __( "Unique identifier from Foursquare (md5-looking hash)." ),
+			'table' => false,
+		) );
+
+
+		/**
+		 * Get the full URL to the Foursquare profile page for someone, based on their term_id
+		 * @param  Int $term_id The id for this person's term entry
+		 * @return String URL to their Foursquare profile, or empty string if none.
+		 */
+		function get_foursquare_url( $term_id ) {
+			if ( $user = get_term_meta( $term_id, 'people-foursquare', true ) ) {
+				$user = 'https://foursquare.com/user/' . $user; // have to use this format because we don't always have username
+			}
+			return $user;
+		}
+	}
+}, 102 );

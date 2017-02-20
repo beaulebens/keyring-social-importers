@@ -12,8 +12,6 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const MIN_HOURS_GAP     = 24; // Number of hours required to trigger a new "flight grouping" (and Post)
 
-	var $auto_import = false;
-
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
