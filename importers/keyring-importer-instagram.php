@@ -177,7 +177,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Tags
 			$tags = $this->get_option( 'tags' );
-			if ( !empty( $post->tags ) ) {
+			if ( is_array( $tags ) && ! empty( $post->tags ) ) {
 				$tags = array_merge( $tags, $post->tags );
 			}
 
