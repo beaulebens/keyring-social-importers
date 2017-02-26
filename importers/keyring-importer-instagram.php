@@ -497,7 +497,7 @@ add_action( 'init', function() {
 		'instagram',
 		'Keyring_Instagram_Importer',
 		plugin_basename( __FILE__ ),
-		__( 'Download copies of your Instagram photos and publish them all as individual Posts (marked as "image" format).', 'keyring' )
+		__( 'Download copies of your Instagram photos and videos, and publish them all as individual Posts (marked as "image" or "video" format).', 'keyring' )
 	);
 } );
 
