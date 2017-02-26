@@ -15,6 +15,17 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		parent::__construct();
 		add_action( 'keyring_importer_twitter_custom_options', array( $this, 'custom_options' ) );
 
+		// Fix old newline problem with Twitter importer
+		add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+			$reprocessors[ 'twitter-newlines' ] = array(
+				'label'       => __( 'Correct newline handling in Tweets', 'keyring' ),
+				'description' => __( 'Old tweets were imported with newlines being handled incorrectly. The importer handles them correctly now, and this will reprocess old data to handle them on already-imported tweets.', 'keyring' ),
+				'callback'    => array( $this, 'reprocess_newlines' ),
+				'service'     => $this->taxonomy->slug,
+			);
+			return $reprocessors;
+		} );
+
 		// If we have People & Places available, then allow re-processing old posts as well
 		if ( class_exists( 'People_Places' ) ) {
 			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
@@ -193,6 +204,9 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Clean up post content for insertion
 			$post_content = esc_sql( html_entity_decode( trim( $post_content ) ) );
 
+			// Add HTML links to URLs, usernames and hashtags
+			$post_content = make_clickable( esc_html( $post_content ) );
+
 			// Grab any images associated with this tweet
 			$images = false;
 			$extended_media = array();
@@ -212,9 +226,6 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post_content, $tag ) ) {
 				$tags = array_merge( $tags, $tag[2] );
 			}
-
-			// Add HTML links to URLs, usernames and hashtags
-			$post_content = make_clickable( esc_html( $post_content ) );
 
 			// Include geo Data (if provided by Twitter)
 			if ( !empty( $post->geo ) && 'point' == strtolower( $post->geo->type ) ) {
@@ -285,13 +296,17 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				// Looks like a duplicate
 				$skipped++;
 			} else {
+				$post['post_content'] = wpautop( str_replace( '\n', "\n", $post['post_content'] ) );
+
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( !$post_id ) {
 					continue;
+				}
 
 				// Mark it as an aside
 				set_post_format( $post_id, 'aside' );
@@ -354,6 +369,39 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	 * Reprocess a $post and identify/link up People.
 	 */
 	function reprocess_people( $post ) {
+ 		// Get raw data
+ 		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+ 		if ( ! $raw ) {
+ 			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+ 		}
+
+ 		// Decode it, and bail if that fails for some reason
+ 		$raw = json_decode( $raw );
+ 		if ( null === $raw ) {
+ 			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+ 		}
+
+ 		// Mentions
+ 		if ( ! empty( $raw->entities->user_mentions ) ) {
+ 			foreach ( $raw->entities->user_mentions as $user ) {
+ 				People_Places::add_person_to_post(
+ 					static::SLUG,
+ 					$user->screen_name,
+ 					array(
+ 						'name' => trim( $user->name )
+ 					),
+ 					$post->ID
+ 				);
+ 			}
+ 		}
+
+ 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+ 	}
+
+	/**
+	 * Don't botch the escaping on newlines.
+	 */
+	function reprocess_newlines( $post ) {
 		// Get raw data
 		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
 		if ( ! $raw ) {
@@ -362,23 +410,33 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 		// Decode it, and bail if that fails for some reason
 		$raw = json_decode( $raw );
-		if ( null == $raw ) {
+		if ( null === $raw ) {
 			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
 		}
 
-		// Mentions
-		if ( ! empty( $raw->entities->user_mentions ) ) {
-			foreach ( $raw->entities->user_mentions as $user ) {
-				People_Places::add_person_to_post(
-					static::SLUG,
-					$user->screen_name,
-					array(
-						'name' => trim( $user->name )
-					),
-					$post->ID
-				);
-			}
+		// Don't bother doing anything if there are no newlines in the raw content
+		if ( ! stristr( $raw->text, "\n" ) ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
 		}
+
+		$post_content = $raw->text;
+
+		// Better content for retweets
+		if ( !empty( $raw->retweeted_status ) ) {
+			$post_content = $raw->retweeted_status->text;
+		}
+
+		// Clean up post content for insertion
+		$post_content = esc_sql( html_entity_decode( trim( $post_content ) ) );
+
+		// Add HTML links to URLs, usernames and hashtags
+		$post_content = make_clickable( esc_html( $post_content ) );
+
+		$post_content = wpautop( str_replace( '\n', "\n", $post_content ) );
+
+		$post_data = get_post( $post->ID );
+		$post_data->post_content = $post_content;
+		wp_update_post( $post_data );
 
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
 	}
