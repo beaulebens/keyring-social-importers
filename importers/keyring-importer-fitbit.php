@@ -84,12 +84,12 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 
 	// Anything less than 1 hour is shown in minutes, otherwise hours + minutes
 	function format_duration( $num ) {
-		if ( $num < 3600 ) {
-			return sprintf( __( '%s minutes', 'keyring' ), round( $num / 60 ) );
+		if ( $num < 60 ) {
+			return sprintf( __( '%s minutes', 'keyring' ), $num );
 		} else {
-			$hours = floor( $num / 60 / 60 );
-			$num = $num - ( $hours * 60 * 60 );
-			return sprintf( __( '%1$s hours, %2$s minutes', 'keyring' ), $hours, round( $num / 60 ) );
+			$hours = floor( $num / 60 );
+			$min = $num - ( $hours * 60 );
+			return sprintf( __( '%1$s hours, %2$s minutes', 'keyring' ), $hours, $min );
 		}
 	}
 
