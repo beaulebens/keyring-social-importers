@@ -866,6 +866,30 @@ abstract class Keyring_Importer_Base {
 			wp_update_post( $post );
 		}
 	}
+
+	/**
+	 * Similar to sideload_media, but a little simpler. This will download a video
+	 * from a URL, and then embed it into a post by replacing the same URL
+	 */
+	function sideload_video( $url, $post_id ) {
+		$file = array();
+		$file['tmp_name'] = download_url( $url );
+		if ( is_wp_error( $file['tmp_name'] ) ) {
+			// Download failed, leave the post alone
+			@unlink( $file_array['tmp_name'] );
+		} else {
+			// Download worked, now import into Media Library
+			$file['name'] = basename( $url );
+			$id = media_handle_sideload( $file, $post_id );
+			@unlink( $file_array['tmp_name'] );
+			if ( ! is_wp_error( $id ) ) {
+				// Update URL in post to point to the local copy
+				$post_data = get_post( $post_id );
+				$post_data->post_content = str_replace( $url, wp_get_attachment_url( $id ), $post_data->post_content );
+				wp_update_post( $post_data );
+			}
+		}
+	}
 }
 
 /**

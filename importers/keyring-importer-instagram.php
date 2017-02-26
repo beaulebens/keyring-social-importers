@@ -15,6 +15,17 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	function __construct() {
 		parent::__construct();
 
+		// Allow users to re-process old posts and handle video posts better
+		add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+			$reprocessors[ 'instagram-videos' ] = array(
+				'label'       => __( 'Instagram video posts', 'keyring' ),
+				'description' => __( 'Previously, Instagram video posts were just handled like images. This will download the video, embed it in the post, and mark the post as a video post-format.', 'keyring' ),
+				'callback'    => array( $this, 'reprocess_videos' ),
+				'service'     => $this->taxonomy->slug,
+			);
+			return $reprocessors;
+		} );
+
 		// If we have People & Places available, then allow re-processing old posts as well
 		if ( class_exists( 'People_Places' ) ) {
 			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
@@ -134,14 +145,26 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
-			// Construct a post body. By default we'll just link to the external image.
-			// In insert_posts() we'll attempt to download/replace that with a local version.
-			$post_content = '<p class="instagram-image">';
-			$post_content .= '<a href="' . esc_url( $post->link ) . '" class="instagram-link">';
-			$post_content .= '<img src="' . esc_url( $post->images->standard_resolution->url ) . '" width="' . esc_attr( $post->images->standard_resolution->width ) . '" height="' . esc_attr( $post->images->standard_resolution->height ) . '" alt="' . esc_attr( $post_title ) . '" class="instagram-img" />';
-			$post_content .= '</a></p>';
-			if ( !empty( $post->caption ) )
+			// Construct a post body.
+			$instagram_video = false;
+			if ( ! empty( $post->videos->standard_resolution->url ) ) {
+				// We've got a video to handle
+				$instagram_video = $post->videos->standard_resolution->url;
+
+				$post_content = '<p class="instagram-video">';
+				$post_content .= "\n\n" . esc_url( $post->videos->standard_resolution->url ) . "\n\n";
+				$post_content .= '</p>';
+			} else {
+				// Just an image. By default we'll just link to the external image.
+				// In insert_posts() we'll attempt to download/replace that with a local version.
+				$post_content = '<p class="instagram-image">';
+				$post_content .= '<a href="' . esc_url( $post->link ) . '" class="instagram-link">';
+				$post_content .= '<img src="' . esc_url( $post->images->standard_resolution->url ) . '" width="' . esc_attr( $post->images->standard_resolution->width ) . '" height="' . esc_attr( $post->images->standard_resolution->height ) . '" alt="' . esc_attr( $post_title ) . '" class="instagram-img" />';
+				$post_content .= '</a></p>';
+			}
+			if ( ! empty( $post->caption ) ) {
 				$post_content .= "\n<p class='instagram-caption'>" . $post->caption->text . '</p>';
+			}
 
 			// Include geo Data
 			$geo = false;
@@ -167,6 +190,16 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 						'name'    => $user->user->full_name,
 						'picture' => $user->user->profile_picture,
 						'id'      => $user->user->id
+					);
+				}
+			}
+
+			// User mentions in captions
+			if ( ! empty( $post->caption->text ) && stristr( $post->caption->text, '@' ) ) {
+				preg_match_all( '/(^|[(\[\s\.])?@(\w+)/', $post->caption->text, $matches );
+				foreach ( (array) $matches[2] as $match ) {
+					$people[ trim( $match ) ] = array(
+						'name' => trim( $match )
 					);
 				}
 			}
@@ -203,6 +236,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				'instagram_id',
 				'instagram_url',
 				'instagram_img',
+				'instagram_video',
 				'instagram_filter',
 				'instagram_raw',
 				'people',
@@ -231,17 +265,23 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				// Track which Keyring service was used
 				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
-				// Mark it as an aside
-				set_post_format( $post_id, 'image' );
+				// Mark post format, based on what we actually imported
+				if ( $instagram_video ) {
+					set_post_format( $post_id, 'video' );
+				} else {
+					set_post_format( $post_id, 'image' );
+				}
 
 				// Update Category
 				wp_set_post_categories( $post_id, $post_category );
@@ -250,8 +290,13 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'instagram_url', $instagram_url );
 				add_post_meta( $post_id, 'instagram_filter', $instagram_filter );
 
-				if ( count( $tags ) )
+				if ( $instagram_video ) {
+					add_post_meta( $post_id, 'instagram_video', $instagram_video );
+				}
+
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Store geodata if it's available
 				if ( ! empty( $geo ) ) {
@@ -262,7 +307,16 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $instagram_raw ) ) );
 
-				$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
+				if ( $instagram_video ) {
+					// Sideload thumbnail image just for "completeness"
+					media_sideload_image( $instagram_img, $post_id );
+
+					// Sideload the video itself
+					$this->sideload_video( $instagram_video, $post_id );
+				} else {
+					// Sideload and embed image
+					$this->sideload_media( $instagram_img, $post_id, $post, apply_filters( 'keyring_instagram_importer_image_embed_size', 'full' ) );
+				}
 
 				// If we found people, and have the People & Places plugin available
 				// to handle processing/storing, then store references to people against
@@ -388,7 +442,50 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 		}
 
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Now that we know how to handle videos, we can go back over old posts and download them
+	 */
+	function reprocess_videos( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
 		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Look for video elements and if found, handle it
+		if ( empty( $raw->videos->standard_resolution->url ) ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		} else {
+			// Change the content, so we're ready to sideload
+			$post_content = '<p class="instagram-video">';
+			$post_content .= "\n\n" . esc_url( $raw->videos->standard_resolution->url ) . "\n\n";
+			$post_content .= '</p>';
+
+			if ( ! empty( $raw->caption ) ) {
+				$post_content .= "\n<p class='instagram-caption'>" . $raw->caption->text . '</p>';
+			}
+
+			$post_data = get_post( $post->ID );
+			$post_data->post_content = $post_content;
+			wp_update_post( $post_data );
+
+			// Handle the video
+			$this->sideload_video( $raw->videos->standard_resolution->url, $post->ID );
+
+			// Update the post format
+			set_post_format( $post->ID, 'video' );
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
 }
 
 } // end function Keyring_Instagram_Importer
