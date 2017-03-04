@@ -1,8 +1,8 @@
 === Keyring Social Importers ===
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
 Requires at least: 3.3
-Tested up to: 4.7.1
-Stable Tag: 1.6
+Tested up to: 4.7.2
+Stable Tag: 1.7
 
 Import your posts/images/etc from Twitter, Instagram, Pinterest, and more into your WordPress install. Own your content.
 
@@ -115,6 +115,13 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 == Changelog ==
 
+= 1.7 =
+* Enhancement: Places support for Nest and TripIt importers.
+* Enhancement: Instagram importer now supports Video posts, and People.
+* Enhancement: REST API support.
+* Enhancement: New filter for disabling Instapaper remote content download.
+* Enhancement: New filter for injecting custom CSS into the header of an importer.
+
 = 1.6 =
 * NOTE: Update to Keyring 1.7 for full compatibility.
 * Enhancement: Nest Camera importer.
@@ -127,7 +134,6 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Enhancement: Link back to the importer on the success screen.
 * Enhancement: Add a new filter to the default header (`keyring_importer_header_css`) so that you can easily inject some custom CSS, without completely recreating the header.
 * Bugfix: Remove a bunch of unused global variables.
-
 
 = 1.5 =
 * NOTE: Update Keyring to 1.6.2 for best results
@@ -143,7 +149,6 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Bugfix: Switch to HTTPS for Flickr (now required)
 * Bugfix: Use user-id in URLs for Flickr (more reliable)
 * Bugfix: Auto-import Instagram photos using timestamps instead of ids, which is more reliable
-
 
 = 1.4 =
 * BREAKING: Change from using a value in post meta (keyring_service) to using a custom taxonomy ('keyring_services') to reference the service a post was imported from. Entries are automatically created for all importers.
