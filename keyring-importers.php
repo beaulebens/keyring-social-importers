@@ -909,6 +909,7 @@ add_action( 'init', function() {
 				'public'            => true, // Allows you to use them in Custom Menus
 				'hierarchical'      => false,
 				'show_admin_column' => true,
+				'show_in_rest'      => true,
 				'rewrite'           => array(
 					'slug' => 'service',
 				),
