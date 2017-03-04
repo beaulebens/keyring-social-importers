@@ -12,6 +12,23 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const MIN_HOURS_GAP     = 24; // Number of hours required to trigger a new "flight grouping" (and Post)
 
+	function __construct() {
+		parent::__construct();
+
+		// If we have People & Places available, then allow re-processing old posts as well
+		if ( class_exists( 'People_Places' ) ) {
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'tripit-places' ] = array(
+					'label'       => __( 'Places you have flown to via TripIt', 'keyring' ),
+					'description' => __( 'Go back through your TripIt trips and link every flight up with the airports you flew through.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_places' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+	}
+
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
@@ -101,7 +118,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 			$prev_end = 0;
 			$post_title = '';
 			for ( $s = 0; $s < count( $trip->Segment ); $s++ ) {
-				// TripIt return a single-segment trip as an object, ugh!
+				// TripIt returns a single-segment trip as an object, ugh!
 				if ( is_object( $trip->Segment ) ) {
 					$trip->Segment = array( $trip->Segment );
 				}
@@ -311,7 +328,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'tripit_id', $tripit_id );
 
 				// Store geodata if it's available
-				if ( !empty( $geo_polyline ) ) {
+				if ( ! empty( $geo_polyline ) ) {
 					add_post_meta( $post_id, 'geo_polyline', wp_slash( json_encode( $geo_polyline ) ) );
 					add_post_meta( $post_id, 'geo_public', 1 );
 				}
@@ -351,6 +368,79 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 		if ( 01 == date( 'H' ) || 12 == date( 'H' ) )
 			parent::do_auto_import();
 	}
+
+	/**
+	 * Reprocess a $post and identify/link up Places.
+	 */
+	function reprocess_places( $post ) {
+		// Get raw data. TripIt is weird, so data is only available on _some_ posts.
+		// We need to match it up/apply Places later.
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Get all of the posts associated with this trip (not just this one)
+		$posts = get_posts( array(
+			'meta_query' => array(
+				array(
+					'key'     => 'tripit_id',
+					'value'   => get_post_meta( $post->ID, 'tripit_id', true ),
+					'compare' => '=',
+				)
+			)
+		) );
+		if ( empty( $posts ) || is_wp_error( $posts ) ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// For each post, use the tags to figure out which airports are relevant
+		foreach ( (array) $posts as $post ) {
+			// Get the tags on this post
+			$tags = wp_get_post_tags( $post->ID, array( 'fields' => 'names' ) );
+
+			// Match those tags against an airport code anywhere in this trip
+			foreach ( (array) $tags as $tag ) {
+				foreach ( $raw->Segment as $segment ) {
+					// Use the matching airport details to add a place
+					if ( strtoupper( $tag ) == strtoupper( $segment->start_airport_code ) ) {
+						People_Places::add_place_to_post(
+							static::SLUG,
+							$segment->start_airport_code,
+							@array(
+								'id'            => $segment->start_airport_code,
+								'name'          => "{$segment->start_city_name} {$segment->start_country_code} ($segment->start_airport_code)",
+								'geo_latitude'  => $segment->start_airport_latitude,
+								'geo_longitude' => $segment->start_airport_longitude,
+							),
+							$post->ID
+						);
+					} else if ( strtoupper( $tag ) == strtoupper( $segment->end_airport_code ) ) {
+						People_Places::add_place_to_post(
+							static::SLUG,
+							$segment->end_airport_code,
+							@array(
+								'id'            => $segment->end_airport_code,
+								'name'          => "{$segment->end_city_name} {$segment->end_country_code} ($segment->end_airport_code)",
+								'geo_latitude'  => $segment->end_airport_latitude,
+								'geo_longitude' => $segment->end_airport_longitude,
+							),
+							$post->ID
+						);
+					}
+					// City names are also used as tags, but won't match anything
+				}
+			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
 }
 
 } // end function Keyring_Instagram_Importer
@@ -373,7 +463,7 @@ add_action( 'init', function() {
 			'key'   => 'tripit',
 			'label' => __( 'Airport code' ),
 			'type'  => 'text',
-			'help'  => __( "3-character international airport code." ),
+			'help'  => __( "3-character airport code (IATA)." ),
 			'table' => false,
 		) );
 	}
