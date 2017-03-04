@@ -206,6 +206,21 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				}
 			}
 
+			// Set up the data for Places support
+			$places = array();
+
+			// Structure
+			$places[] = array(
+				'id'   => $camera->structure_id,
+				'name' => $importdata->structures->{$camera->structure_id}->name,
+			);
+
+			// Camera
+			$places[] = array(
+				'id'   => $camera->device_id,
+				'name' => $camera->name,
+			);
+
 			// Construct a post body. By default we'll just link to the external image.
 			// In insert_posts() we'll attempt to download/replace that with a local version.
 			$post_content = '<p class="nest-cam">';
@@ -215,6 +230,7 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 			// Other bits
 			$post_author = $this->get_option( 'author' );
 			$post_status = 'publish';
+			$nest_raw    = $camera;
 
 			// Build the post array, and hang onto it along with the others
 			$this->posts[] = compact(
@@ -226,7 +242,9 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				'post_status',
 				'post_category',
 				'nest_img',
-				'tags'
+				'tags',
+				'places',
+				'nest_raw'
 			);
 		}
 	}
@@ -270,9 +288,19 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				// Update Category
 				wp_set_post_categories( $post_id, $post_category );
 
+				// Raw data
+				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $nest_raw ) ) );
+
 				// Tags
 				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
+
+				// Handle linking to a global location, if People & Places is available
+				if ( ! empty( $places ) && class_exists( 'People_Places' ) ) {
+					foreach ( (array) $places as $place ) {
+						People_Places::add_place_to_post( static::SLUG, $place['id'], $place, $post_id );
+					}
 				}
 
 				// Download and handle the image. We have to do this pretty manually
@@ -325,3 +353,16 @@ add_action( 'init', function() {
 		__( 'Periodically take a snapshot from your Nest Cameras. Creates a post for each snapshot, and saves the image in your Media Library.', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'nest',
+			'label' => __( 'Nest Location id' ),
+			'type'  => 'text',
+			'help'  => __( "Unique identifier from Nest (unique-looking hash)." ),
+			'table' => false,
+		) );
+	}
+}, 102 );
