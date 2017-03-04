@@ -165,6 +165,21 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					$tags[] = $segment->end_city_name;
 					$tags[] = $segment->end_airport_code;
 
+					// Collect a list of places involved in this trip
+					$places = array();
+					$places[] = array(
+						'id'            => $segment->start_airport_code,
+						'name'          => "{$segment->start_city_name} {$segment->start_country_code} ($segment->start_airport_code)",
+						'geo_latitude'  => $segment->start_airport_latitude,
+						'geo_longitude' => $segment->start_airport_longitude,
+					);
+					$places[] = array(
+						'id'            => $segment->end_airport_code,
+						'name'          => "{$segment->end_city_name} {$segment->end_country_code} ($segment->end_airport_code)",
+						'geo_latitude'  => $segment->end_airport_latitude,
+						'geo_longitude' => $segment->end_airport_longitude,
+					);
+
 					// Other bits
 					$post_author       = $this->get_option( 'author' );
 					$post_status       = 'publish';
@@ -183,6 +198,20 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					$post_content .= "<li>Flew {$segment->start_city_name} ({$segment->start_airport_code}) to {$segment->end_city_name} ({$segment->end_airport_code}).$time_dist</li>\n";
 					$tags[] = $segment->end_city_name;
 					$tags[] = $segment->end_airport_code;
+
+					// More places!
+					$places[] = array(
+						'id'            => $segment->start_airport_code,
+						'name'          => "{$segment->start_city_name} {$segment->start_country_code} ($segment->start_airport_code)",
+						'geo_latitude'  => $segment->start_airport_latitude,
+						'geo_longitude' => $segment->start_airport_longitude,
+					);
+					$places[] = array(
+						'id'            => $segment->end_airport_code,
+						'name'          => "{$segment->end_city_name} {$segment->end_country_code} ($segment->end_airport_code)",
+						'geo_latitude'  => $segment->end_airport_latitude,
+						'geo_longitude' => $segment->end_airport_longitude,
+					);
 
 					// ...and the geo path. Only need the end airport since it continues from the previous location
 					if ( ! empty( $segment->end_airport_latitude ) && !empty( $segment->end_airport_longitude ) )
@@ -228,7 +257,8 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 						'geo_polyline',
 						'tripit_id',
 						'tripit_segment_id',
-						'tripit_raw'
+						'tripit_raw',
+						'places'
 					);
 				}
 			}
@@ -288,6 +318,13 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 				if ( $tripit_raw ) {
 					add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $tripit_raw ) ) );
+				}
+
+				// Handle linking to a global location, if People & Places is available
+				if ( ! empty( $places ) && class_exists( 'People_Places' ) ) {
+					foreach ( (array) $places as $place ) {
+						People_Places::add_place_to_post( static::SLUG, $place['id'], $place, $post_id );
+					}
 				}
 
 				$imported++;
