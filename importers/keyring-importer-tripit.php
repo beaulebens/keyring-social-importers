@@ -14,16 +14,19 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your activities into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all activities." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( isset( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -113,8 +116,9 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				// If a segment occurs more than 24 hours after the previous
 				// one, then we create a new post for it
 				$new_post = false;
-				if ( $start_time > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) )
+				if ( $start_time > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) ) {
 					$new_post = true;
+				}
 
 				if ( $new_post ) {
 					// Post title is an abbreviated version of post content
@@ -129,21 +133,22 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 					// Construct a post body. It's going to contain a text summary of flights
 					$post_content = '<ol class="tripit-flights">' . "\n";
-					if ( !empty( $segment->distance ) && !empty( $segment->duration ) )
+					if ( ! empty( $segment->distance ) && !empty( $segment->duration ) ) {
 						$time_dist = " {$segment->distance} on {$segment->marketing_airline} in {$segment->duration}.";
-					else
+					} else {
 						$time_dist = '';
+					}
 					$post_content .= "<li>Flew {$segment->start_city_name} ({$segment->start_airport_code}) to {$segment->end_city_name} ({$segment->end_airport_code}).$time_dist</li>\n";
 
 					// The path is a series of points, defined by ordered xy co-ords
 					if (
-						!empty( $segment->start_airport_latitude )
+						! empty( $segment->start_airport_latitude )
 					&&
-						!empty( $segment->start_airport_longitude )
+						! empty( $segment->start_airport_longitude )
 					&&
-						!empty( $segment->end_airport_latitude )
+						! empty( $segment->end_airport_latitude )
 					&&
-						!empty( $segment->end_airport_longitude )
+						! empty( $segment->end_airport_longitude )
 					) {
 						$geo_polyline = array(
 							"{$segment->start_airport_latitude},{$segment->start_airport_longitude}",
@@ -170,16 +175,17 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					$post_title .= ':' . $segment->end_airport_code;
 
 					// Add this flight to the list of summaries...
-					if ( !empty( $segment->distance ) && !empty( $segment->duration ) )
+					if ( ! empty( $segment->distance ) && !empty( $segment->duration ) ) {
 						$time_dist = " {$segment->distance} on {$segment->marketing_airline} in {$segment->duration}.";
-					else
+					} else {
 						$time_dist = '';
+					}
 					$post_content .= "<li>Flew {$segment->start_city_name} ({$segment->start_airport_code}) to {$segment->end_city_name} ({$segment->end_airport_code}).$time_dist</li>\n";
 					$tags[] = $segment->end_city_name;
 					$tags[] = $segment->end_airport_code;
 
 					// ...and the geo path. Only need the end airport since it continues from the previous location
-					if ( !empty( $segment->end_airport_latitude ) && !empty( $segment->end_airport_longitude ) )
+					if ( ! empty( $segment->end_airport_latitude ) && !empty( $segment->end_airport_longitude ) )
 						$geo_polyline[] = "{$segment->end_airport_latitude},{$segment->end_airport_longitude}";
 				}
 
@@ -194,16 +200,18 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					$write_out_post = true;
 				} else {
 					$next_start = strtotime( $trip->Segment[ $s + 1 ]->StartDateTime->date . 'T' . $trip->Segment[ $s + 1 ]->StartDateTime->time . $trip->Segment[ $s + 1 ]->StartDateTime->utc_offset );
-					if ( $next_start > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) )
+					if ( $next_start > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) ) {
 						$write_out_post = true;
+					}
 				}
 
 				if ( $write_out_post ) {
 					// The first post created for each trip contains the full raw import data
-					if ( !count( $trip_posts ) )
+					if ( !count( $trip_posts ) ) {
 						$tripit_raw = $trip;
-					else
+					} else {
 						$tripit_raw = false;
+					}
 
 					// Need to "finish up" the post content
 					$post_content .= "</ol>";
@@ -239,7 +247,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 			extract( $post );
 
 			if (
-				!$tripit_segment_id
+				! $tripit_segment_id
 			||
 				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'tripit_segment_id' AND meta_value = %s", $tripit_segment_id ) )
 			||
@@ -250,11 +258,13 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				// Track which Keyring service was used
 				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
@@ -318,3 +328,16 @@ add_action( 'init', function() {
 		__( 'Download your travel details from TripIt and auto-post maps of your flights. Each flight is saved as a Post containing a map, marked with the Status format.', 'keyring' )
 	);
 } );
+
+// Add importer-specific integration for People & Places (if installed)
+add_action( 'init', function() {
+	if ( class_exists( 'People_Places') ) {
+		Taxonomy_Meta::add( 'places', array(
+			'key'   => 'tripit',
+			'label' => __( 'Airport code' ),
+			'type'  => 'text',
+			'help'  => __( "3-character international airport code." ),
+			'table' => false,
+		) );
+	}
+}, 102 );

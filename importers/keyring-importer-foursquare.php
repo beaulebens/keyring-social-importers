@@ -40,16 +40,19 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all checkins." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( isset( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -105,7 +108,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 		}
 
 		// Make sure we have some checkins to parse
-		if ( !is_object( $importdata ) || !count( $importdata->response->checkins->items ) ) {
+		if ( ! is_object( $importdata ) || ! count( $importdata->response->checkins->items ) ) {
 			$this->finished = true;
 			return;
 		}
@@ -113,8 +116,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata->response->checkins->items as $post ) {
 			// Sometimes the venue has no name. There's not much we can do with these.
-			if ( empty( $post->venue->name ) )
+			if ( empty( $post->venue->name ) ) {
 				continue;
+			}
 
 			// Post title can be empty for Status, but it makes them easier to manage if they have *something*
 			$post_title = sprintf( __( 'Checked in at %s', 'keyring' ), $post->venue->name );
@@ -128,10 +132,12 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			$post_category = array( $this->get_option( 'category' ) );
 
 			// Construct a post body
-			if ( !empty( $post->venue->id ) )
+			if ( !empty( $post->venue->id ) ) {
 				$venue_link = '<a href="' . esc_url( 'http://foursquare.com/v/' . $post->venue->id ) . '" class="foursquare-link">' . esc_html( $post->venue->name ) . '</a>';
-			else
+			} else {
 				$venue_link = $post->venue->name;
+			}
+
 			if ( isset( $post->event ) ) {
 				$post_content = sprintf(
 					__( 'Checked in at %1$s, for %2$s.', 'keyring' ),
@@ -149,8 +155,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			$tags = $this->get_option( 'tags' );
 			if ( isset( $post->shout ) ) {
 				// Any hashtags used in a note will be applied to the Post as tags in WP
-				if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post->shout, $tag ) )
+				if ( preg_match_all( '/(^|[(\[\s])#(\w+)/', $post->shout, $tag ) ) {
 					$tags = array_merge( $tags, $tag[2] );
+				}
 
 				$post_content .= "\n\n<blockquote class='foursquare-note'>" . $post->shout . "</blockquote>";
 			}
@@ -185,7 +192,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 			// Extract specific details of the place/venue
 			$place = array();
-			if ( !empty( $post->venue ) ) {
+			if ( ! empty( $post->venue ) ) {
 				$place['name']          = $post->venue->name;
 				$place['geo_latitude']  = $post->venue->location->lat;
 				$place['geo_longitude'] = $post->venue->location->lng;
@@ -231,7 +238,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			extract( $post );
 
 			if (
-				!$foursquare_id
+				! $foursquare_id
 			||
 				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'foursquare_id' AND meta_value = %s", $foursquare_id ) )
 			||
@@ -242,11 +249,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				$post['ID'] = $post_id;
 
@@ -266,7 +275,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				}
 
 				// Store geodata if it's available
-				if ( !empty( $geo ) ) {
+				if ( ! empty( $geo ) ) {
 					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
 					add_post_meta( $post_id, 'geo_public', 1 );
@@ -426,7 +435,6 @@ add_action( 'init', function() {
 			'help'  => __( "Unique identifier from Foursquare (md5-looking hash)." ),
 			'table' => false,
 		) );
-
 
 		/**
 		 * Get the full URL to the Foursquare profile page for someone, based on their term_id
