@@ -67,26 +67,31 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		}
 
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all checkins." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( ! empty( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
-		if ( isset( $_POST['include_rts'] ) )
+		if ( ! empty( $_POST['include_rts'] ) ) {
 			$_POST['include_rts'] = true;
-		else
+		} else {
 			$_POST['include_rts'] = false;
+		}
 
-		if ( isset( $_POST['include_replies'] ) )
+		if ( ! empty( $_POST['include_replies'] ) ) {
 			$_POST['include_replies'] = true;
-		else
+		} else {
 			$_POST['include_replies'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -116,11 +121,20 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			'include_entities'    => 'true',
 			'contributor_details' => 'true',
 		);
-		if ( false == $this->get_option( 'include_replies' ) )
+
+		// Replies?
+		if ( false == $this->get_option( 'include_replies' ) ) {
 			$params['exclude_replies'] = 'true';
-		if ( true == $this->get_option( 'include_rts' ) )
+		}
+
+		// Retweets?
+		if ( true == $this->get_option( 'include_rts' ) ) {
 			$params['include_rts'] = 'true';
-		$url = $url . http_build_query( $params );
+		} else {
+			$params['include_rts'] = 'false';
+		}
+
+		$url .= http_build_query( $params );
 
 
 		if ( $this->auto_import ) {
