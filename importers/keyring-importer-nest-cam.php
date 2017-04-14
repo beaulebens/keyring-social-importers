@@ -28,49 +28,6 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 		<?php
 	}
 
-	function handle_request_options() {
-		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your pins into." ) );
-		}
-
-		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all pins." ) );
-		}
-
-		if ( isset( $_POST['auto_import'] ) ) {
-			$_POST['auto_import'] = true;
-		} else {
-			$_POST['auto_import'] = false;
-		}
-
-		if ( isset( $_POST['auto_tag'] ) ) {
-			$_POST['auto_tag'] = true;
-		} else {
-			$_POST['auto_tag'] = false;
-		}
-
-		if ( ! isset( $_POST['schedule'] ) ) {
-			$_POST['schedule'] = array();
-		}
-
-		// If there were errors, output them, otherwise store options and start importing
-		if ( count( $this->errors ) ) {
-			$this->step = 'options';
-		} else {
-			$this->set_option( array(
-				'category'    => (int) $_POST['category'],
-				'tags'        => explode( ',', $_POST['tags'] ),
-				'author'      => (int) $_POST['author'],
-				'auto_import' => $_POST['auto_import'],
-				'auto_tag'    => $_POST['auto_tag'],
-				'schedule'    => $_POST['schedule'], // array of camera_id=>hours
-			) );
-
-			$this->step = 'import';
-		}
-	}
-
 	function custom_options() {
 		$response = $this->service->request( 'https://developer-api.nest.com/' );
 		if ( Keyring_Util::is_error( $response ) ) {
@@ -131,6 +88,49 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				}
 				echo "</ul></td></tr>";
 			}
+		}
+	}
+
+	function handle_request_options() {
+		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
+			$this->error( __( "Make sure you select a valid category to import your pins into." ) );
+		}
+
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
+			$this->error( __( "You must select an author to assign to all pins." ) );
+		}
+
+		if ( isset( $_POST['auto_import'] ) ) {
+			$_POST['auto_import'] = true;
+		} else {
+			$_POST['auto_import'] = false;
+		}
+
+		if ( isset( $_POST['auto_tag'] ) ) {
+			$_POST['auto_tag'] = true;
+		} else {
+			$_POST['auto_tag'] = false;
+		}
+
+		if ( ! isset( $_POST['schedule'] ) ) {
+			$_POST['schedule'] = array();
+		}
+
+		// If there were errors, output them, otherwise store options and start importing
+		if ( count( $this->errors ) ) {
+			$this->step = 'options';
+		} else {
+			$this->set_option( array(
+				'category'    => (int) $_POST['category'],
+				'tags'        => explode( ',', $_POST['tags'] ),
+				'author'      => (int) $_POST['author'],
+				'auto_import' => $_POST['auto_import'],
+				'auto_tag'    => $_POST['auto_tag'],
+				'schedule'    => $_POST['schedule'], // array of camera_id=>hours
+			) );
+
+			$this->step = 'import';
 		}
 	}
 
