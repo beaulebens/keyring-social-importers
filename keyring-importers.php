@@ -184,8 +184,9 @@ abstract class Keyring_Importer_Base {
 	function require_keyring() {
 		global $keyring_required; // So that we only send the message once
 
-		if ( 'update.php' == basename( $_SERVER['REQUEST_URI'] ) || $keyring_required )
+		if ( 'update.php' == basename( $_SERVER['REQUEST_URI'] ) || $keyring_required ) {
 			return;
+		}
 
 		$keyring_required = true;
 
