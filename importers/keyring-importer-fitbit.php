@@ -15,16 +15,19 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your data into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all data." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( isset( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -159,11 +162,13 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				// Track which Keyring service was used
 				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
@@ -173,8 +178,9 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 				// Update Category
 				wp_set_post_categories( $post_id, $post_category );
 
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $fitbit_raw ) ) );
 

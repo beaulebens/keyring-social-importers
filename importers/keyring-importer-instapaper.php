@@ -13,8 +13,6 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const LINKS_PER_REQUEST = 25; // How many links to request from Instapaper in each request
 
-	var $request_method     = 'POST';
-
 	function __construct() {
 		parent::__construct();
 
@@ -37,16 +35,19 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your links into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all imported links." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( isset( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -85,7 +86,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 		}
 
 		// Make sure we have some bookmarks to parse
-		if ( !is_array( $importdata ) || count( $importdata ) < 2 ) {
+		if ( ! is_array( $importdata ) || count( $importdata ) < 2 ) {
 			$this->finished = true;
 			return;
 		}
@@ -94,8 +95,9 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata as $post ) {
-			if ( 'bookmark' != $post->type )
+			if ( 'bookmark' != $post->type ) {
 				continue;
+			}
 
 			$post_title = $post->title;
 
@@ -112,8 +114,9 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 			// Construct a post body
 			$href         = $post->url;
 			$post_content = '<a href="' . $href . '" class="instapaper-title">' . $post_title . '</a>';
-			if ( !empty( $post->description ) )
+			if ( ! empty( $post->description ) ) {
 				$post_content .= "\n\n<blockquote class='instapaper-note'>" . $post->description . '</blockquote>';
+			}
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );
@@ -142,8 +145,9 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 	 * Sorts bookmarks returned by date, newest first
 	 */
 	function sort_by_time( $a, $b ) {
-		if ( empty( $a->time ) || empty( $b->time ) )
+		if ( empty( $a->time ) || empty( $b->time ) ) {
 			return 0;
+		}
 
 		if ( $a->time == $b->time ) {
 			return 0;
@@ -158,7 +162,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 		foreach ( $this->posts as $post ) {
 			extract( $post );
 			if (
-				!$instapaper_id
+				! $instapaper_id
 			||
 				$wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = 'instapaper_id' AND meta_value = %s", $instapaper_id ) )
 			||
@@ -169,11 +173,13 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				// Track which Keyring service was used
 				wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
@@ -187,8 +193,9 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'instapaper_id', $instapaper_id );
 				add_post_meta( $post_id, 'href', $href );
 
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $instapaper_raw ) ) );
 
@@ -216,18 +223,18 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 		// Get posts which don't have their content downloaded yet
 		$posts = get_posts( array(
 			'posts_per_page' => 10, // Batches of 10, to avoid overloading the API/being slow
-			'post_status' => 'publish',
-			'tax_query' => array(
+			'post_status'    => 'publish',
+			'tax_query'      => array(
 				array(
 					'taxonomy' => 'keyring_services',
-					'field' => 'slug',
-					'terms' => $this->taxonomy // Only get posts imported from Instapaper
+					'field'    => 'slug',
+					'terms'    => $this->taxonomy // Only get posts imported from Instapaperper
 				)
 			),
 			'meta_query' => array(
 				'relation' => 'AND',
 				array(
-					'key' => 'remote_content',
+					'key'     => 'remote_content',
 					'compare' => 'NOT EXISTS' // hasn't been processed already
 				)
 			)

@@ -53,16 +53,19 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 
  	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) )
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) )
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all checkins." ) );
+		}
 
-		if ( isset( $_POST['auto_import'] ) )
+		if ( isset( $_POST['auto_import'] ) ) {
 			$_POST['auto_import'] = true;
-		else
+		} else {
 			$_POST['auto_import'] = false;
+		}
 
 		// If there were errors, output them, otherwise store options and start importing
 		if ( count( $this->errors ) ) {
@@ -106,7 +109,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			'extras'         => implode( ',', $extras ),
 		);
 
-		$url = $url . http_build_query( $params );
+		$url .= http_build_query( $params );
 
 
 		if ( $this->auto_import ) {
@@ -157,8 +160,9 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 		}
 
 		// Get the total number of tweets we're importing
-		if ( !empty( $importdata->photos->total ) )
+		if ( ! empty( $importdata->photos->total ) ) {
 			$this->set_option( 'total', $importdata->photos->total );
+		}
 
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata->photos->photo as $post ) {
@@ -188,8 +192,9 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$post_content .= '<a href="' . esc_url( $flickr_url ) . '" class="flickr-link">';
 			$post_content .= '<img src="' . esc_url( $flickr_img ) . '" alt="' . esc_attr( $post_title ) . '" class="flickr-img" />';
 			$post_content .= '</a></p>';
-			if ( !empty( $post->description->_content ) )
+			if ( ! empty( $post->description->_content ) ) {
 				$post_content .= "\n<p class='flickr-caption'>" . $post->description->_content . '</p>';
+			}
 
 			// Tags are space-separated on Flickr. Throw any machine tags in with manual ones.
 			$tags         = array_merge( $this->get_option( 'tags' ), explode( ' ', $post->tags ) );
@@ -205,13 +210,14 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			}
 
 			// Include geo data (if provided by Flickr)
-			if ( !empty( $post->latitude ) && !empty( $post->longitude ) )
+			if ( ! empty( $post->latitude ) && !empty( $post->longitude ) ) {
 				$geo = array(
 					'lat'  => $post->latitude,
 					'long' => $post->longitude,
 				);
-			else
+			} else {
 				$geo = array();
+			}
 
 			// Keep a full copy of the raw data
 			$flickr_raw = $post;
@@ -238,8 +244,9 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 		}
 
 		// For auto imports, handle paging
-		if ( $this->auto_import )
+		if ( $this->auto_import ) {
 			$this->set_option( 'auto_page', (int) $this->get_option( 'auto_page' ) + 1 );
+		}
 	}
 
 	function insert_posts() {
@@ -258,11 +265,13 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			} else {
 				$post_id = wp_insert_post( $post );
 
-				if ( is_wp_error( $post_id ) )
+				if ( is_wp_error( $post_id ) ) {
 					return $post_id;
+				}
 
-				if ( !$post_id )
+				if ( ! $post_id ) {
 					continue;
+				}
 
 				// Mark it as an image
 				set_post_format( $post_id, 'image' );
@@ -276,11 +285,12 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 
 				// Update Category and Tags
 				wp_set_post_categories( $post_id, $post_category );
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Store geodata if it's available
-				if ( !empty( $geo ) ) {
+				if ( ! empty( $geo ) ) {
 					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
 					add_post_meta( $post_id, 'geo_public', 1 );

@@ -40,11 +40,11 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
 		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all checkins." ) );
 		}
 
@@ -126,13 +126,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			// Parse/adjust dates
 			$post_date_gmt = $post->createdAt;
 			$post_date_gmt = gmdate( 'Y-m-d H:i:s', $post_date_gmt );
-			$post_date = get_date_from_gmt( $post_date_gmt );
+			$post_date     = get_date_from_gmt( $post_date_gmt );
 
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
 			// Construct a post body
-			if ( !empty( $post->venue->id ) ) {
+			if ( ! empty( $post->venue->id ) ) {
 				$venue_link = '<a href="' . esc_url( 'http://foursquare.com/v/' . $post->venue->id ) . '" class="foursquare-link">' . esc_html( $post->venue->name ) . '</a>';
 			} else {
 				$venue_link = $post->venue->name;

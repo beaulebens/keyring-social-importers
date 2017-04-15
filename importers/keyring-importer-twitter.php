@@ -67,11 +67,11 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		}
 
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
 		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all checkins." ) );
 		}
 
@@ -173,32 +173,35 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		}
 
 		// Check for API overage/errors
-		if ( !empty( $importdata->error ) ) {
+		if ( ! empty( $importdata->error ) ) {
 			$this->finished = true;
 			return new Keyring_Error( 'keyring-twitter-importer-throttled', __( 'You have made too many requests to Twitter and have been temporarily blocked. Please try again in 1 hour (duplicate tweets will be skipped).', 'keyring' ) );
 		}
 
 		// Make sure we have some tweets to parse
-		if ( !is_array( $importdata ) || !count( $importdata ) ) {
+		if ( ! is_array( $importdata ) || ! count( $importdata ) ) {
 			$this->finished = true;
 			return;
 		}
 
 		// Get the total number of tweets we're importing
-		if ( !empty( $importdata[0]->user->statuses_count ) )
+		if ( ! empty( $importdata[0]->user->statuses_count ) ) {
 			$this->set_option( 'total', $importdata[0]->user->statuses_count );
+		}
 
 		// Parse/convert everything to WP post structs
 		foreach ( $importdata as $post ) {
 			// Double-check for @replies, which shouldn't be included at all if we chose to skip them
-			if ( true == $this->get_option( 'exclude_replies' ) && null != $post->in_reply_to_screen_name )
+			if ( true == $this->get_option( 'exclude_replies' ) && null != $post->in_reply_to_screen_name ) {
 				continue;
+			}
 
 			// Post title can be empty for Asides, but it makes them easier to manage if they have *something*
 			$title_words = explode( ' ', strip_tags( $post->text ) );
 			$post_title  = implode( ' ', array_slice( $title_words, 0, 5 ) ); // Use the first 5 words
-			if ( count( $title_words ) > 5 )
+			if ( count( $title_words ) > 5 ) {
 				$post_title .= '&hellip;';
+			}
 
 			// Parse/adjust dates
 			$post_date_gmt = strtotime( $post->created_at );
@@ -211,7 +214,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			$post_content = $post->text;
 
 			// Better content for retweets
-			if ( !empty( $post->retweeted_status ) ) {
+			if ( ! empty( $post->retweeted_status ) ) {
 				$post_content = $post->retweeted_status->text;
 			}
 
@@ -224,7 +227,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Grab any images associated with this tweet
 			$images = false;
 			$extended_media = array();
-			if ( !empty( $post->extended_entities->media ) ) {
+			if ( ! empty( $post->extended_entities->media ) ) {
 				$images = array();
 				foreach ( $post->extended_entities->media as $image ) {
 					$img_url = $image->media_url_https;
@@ -242,7 +245,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			}
 
 			// Include geo Data (if provided by Twitter)
-			if ( !empty( $post->geo ) && 'point' == strtolower( $post->geo->type ) ) {
+			if ( ! empty( $post->geo ) && 'point' == strtolower( $post->geo->type ) ) {
 				$geo = array(
 					'lat' => $post->geo->coordinates[0],
 					'long' => $post->geo->coordinates[1]
@@ -318,7 +321,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 					return $post_id;
 				}
 
-				if ( !$post_id ) {
+				if ( ! $post_id ) {
 					continue;
 				}
 
@@ -331,20 +334,24 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				// Store the twitter id, reply ids etc
 				add_post_meta( $post_id, 'twitter_id', $twitter_id );
 				add_post_meta( $post_id, 'twitter_permalink', $twitter_permalink );
-				if ( !empty( $in_reply_to_user_id ) )
+				if ( ! empty( $in_reply_to_user_id ) ) {
 					add_post_meta( $post_id, 'twitter_in_reply_to_user_id', $in_reply_to_user_id );
-				if ( !empty( $in_reply_to_screen_name ) )
+				}
+				if ( ! empty( $in_reply_to_screen_name ) ) {
 					add_post_meta( $post_id, 'twitter_in_reply_to_screen_name', $in_reply_to_screen_name );
-				if ( !empty( $in_reply_to_status_id ) )
+				}
+				if ( ! empty( $in_reply_to_status_id ) ) {
 					add_post_meta( $post_id, 'twitter_in_reply_to_status_id', $in_reply_to_status_id );
+				}
 
 				// Update Category and Tags
 				wp_set_post_categories( $post_id, $post_category );
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				// Store geodata if it's available
-				if ( !empty( $geo ) ) {
+				if ( ! empty( $geo ) ) {
 					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
 					add_post_meta( $post_id, 'geo_public', 1 );

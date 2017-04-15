@@ -72,7 +72,7 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 		foreach ( $importdata->data as $post ) {
 			// Post title can be empty for Images, but it makes them easier to manage if they have *something*
 			$post_title = __( 'Pinned on Pinterest', 'keyring' );
-			if ( !empty( $post->note ) ) {
+			if ( ! empty( $post->note ) ) {
 				$post_title = strip_tags( $post->note );
 			}
 
@@ -172,7 +172,7 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 				}
 
 				// Store geodata if it's available
-				if ( !empty( $geo ) ) {
+				if ( ! empty( $geo ) ) {
 					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
 					add_post_meta( $post_id, 'geo_public', 1 );

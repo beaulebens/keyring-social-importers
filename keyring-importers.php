@@ -35,7 +35,7 @@ Extend this class to write an importer, using Keyring for authentication/request
 */
 
 // Load Importer API
-if ( !function_exists( 'register_importer ' ) ) {
+if ( ! function_exists( 'register_importer ' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/import.php';
 }
 
@@ -64,7 +64,7 @@ abstract class Keyring_Importer_Base {
 	function __construct() {
 		// Can't do anything if Keyring is not available.
 		// Prompt user to install Keyring (if they can), and bail
-		if ( !defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<' ) ) {
+		if ( ! defined( 'KEYRING__VERSION' ) || version_compare( KEYRING__VERSION, static::KEYRING_VERSION, '<' ) ) {
 			if ( current_user_can( 'install_plugins' ) ) {
 				add_thickbox();
 				wp_enqueue_script( 'plugin-install' );
@@ -170,7 +170,7 @@ abstract class Keyring_Importer_Base {
 	static function &init() {
 		static $instance = false;
 
-		if ( !$instance ) {
+		if ( ! $instance ) {
 			$class = get_called_class();
 			$instance = new $class;
 		}
@@ -209,8 +209,9 @@ abstract class Keyring_Importer_Base {
 	 * @return mixed
 	 */
 	function get_option( $name, $default = false ) {
-		if ( isset( $this->options[ $name ] ) )
+		if ( isset( $this->options[ $name ] ) ) {
 			return $this->options[ $name ];
+		}
 		return $default;
 	}
 
@@ -224,14 +225,15 @@ abstract class Keyring_Importer_Base {
 	 * @param mixed $val The value to set this option to
 	 */
 	function set_option( $name, $val = null ) {
-		if ( is_array( $name ) )
+		if ( is_array( $name ) ) {
 			$this->options = array_merge( (array) $this->options, $name );
-		else if ( is_null( $name ) && is_null( $val ) ) // $name = null to reset all options
+		} else if ( is_null( $name ) && is_null( $val ) ) { // $name = null to reset all options
 			$this->options = array();
-		else if ( is_null( $val ) && isset( $this->options[ $name ] ) )
+		} else if ( is_null( $val ) && isset( $this->options[ $name ] ) ) {
 			unset( $this->options[ $name ] );
-		else
+		} else {
 			$this->options[ $name ] = $val;
+		}
 
 		return update_option( 'keyring_' . static::SLUG . '_importer', $this->options );
 	}
@@ -436,8 +438,9 @@ abstract class Keyring_Importer_Base {
 	function verified_connection( $service, $id ) {
 		// Only handle connections that were for us
 		global $keyring_request_token;
-		if ( ! $keyring_request_token || 'keyring-' . static::SLUG . '-importer' != $keyring_request_token->get_meta( 'for' ) )
+		if ( ! $keyring_request_token || 'keyring-' . static::SLUG . '-importer' != $keyring_request_token->get_meta( 'for' ) ) {
 			return;
+		}
 
 		// Only handle requests that were successful, and for our specific service
 		if ( static::SLUG == $service && $id ) {
@@ -505,6 +508,7 @@ abstract class Keyring_Importer_Base {
 							}
 						?>
 						</select> (<a href="edit-tags.php?taxonomy=category"><?php _e( 'Add New Category', 'keyring' ); ?></a>)
+						<p class="description"><?php _e( 'Select a category to assign to all imported posts.', 'keyring' ); ?></p>
 					</td>
 				</tr>
 				<tr valign="top">
@@ -545,6 +549,7 @@ abstract class Keyring_Importer_Base {
 								}
 							?>
 						</select>
+						<p class="description"><?php _e( 'All imported posts will be attributed to this author.', 'keyring' ); ?></p>
 					</td>
 				</tr>
 
@@ -645,14 +650,16 @@ abstract class Keyring_Importer_Base {
 		$this->header();
 		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
 		echo '<ol>';
-		while ( !$this->finished && $num < static::REQUESTS_PER_LOAD ) {
+		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
 			$data = $this->make_request();
-			if ( Keyring_Util::is_error( $data ) )
+			if ( Keyring_Util::is_error( $data ) ) {
 				return $data;
+			}
 
 			$result = $this->extract_posts_from_data( $data );
-			if ( Keyring_Util::is_error( $result ) )
+			if ( Keyring_Util::is_error( $result ) ) {
 				return $result;
+			}
 
 			$result = $this->insert_posts();
 			if ( Keyring_Util::is_error( $result ) ) {
@@ -764,14 +771,15 @@ abstract class Keyring_Importer_Base {
 		do_action( 'import_start' );
 		set_time_limit( 0 );
 		// In case auto-import has been disabled, clear all jobs and bail
-		if ( !$this->get_option( 'auto_import' ) ) {
+		if ( ! $this->get_option( 'auto_import' ) ) {
 			wp_clear_scheduled_hook( 'keyring_' . static::SLUG . '_import_auto' );
 			return;
 		}
 
 		// Need a token to do anything with this
-		if ( !$this->service->get_token() )
+		if ( ! $this->service->get_token() ) {
 			return;
+		}
 
 		require_once ABSPATH . 'wp-admin/includes/import.php';
 		require_once ABSPATH . 'wp-admin/includes/post.php';
@@ -779,18 +787,21 @@ abstract class Keyring_Importer_Base {
 		$this->auto_import = true;
 
 		$num = 0;
-		while ( !$this->finished && $num < static::REQUESTS_PER_LOAD ) {
+		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
 			$data = $this->make_request();
-			if ( Keyring_Util::is_error( $data ) )
+			if ( Keyring_Util::is_error( $data ) ) {
 				return;
+			}
 
 			$result = $this->extract_posts_from_data( $data );
-			if ( Keyring_Util::is_error( $result ) )
+			if ( Keyring_Util::is_error( $result ) ) {
 				return;
+			}
 
 			$result = $this->insert_posts();
-			if ( Keyring_Util::is_error( $result ) )
+			if ( Keyring_Util::is_error( $result ) ) {
 				return;
+			}
 
 			// Keep track of which "page" we're up to, in case an auto importer cares
 			$this->set_option( 'page', $this->get_option( 'page' ) + 1 );
@@ -813,12 +824,15 @@ abstract class Keyring_Importer_Base {
 	 * being imported. See Flickr/Instagram for examples
 	 */
 	function sideload_media( $urls, $post_id, $post, $size = 'large', $append = false ) {
-		if ( !function_exists( 'media_sideload_image' ) )
+		if ( ! function_exists( 'media_sideload_image' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
-		if ( !function_exists( 'download_url' ) )
+		}
+		if ( ! function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
-		if ( !function_exists( 'wp_read_image_metadata' ) )
+		}
+		if ( ! function_exists( 'wp_read_image_metadata' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
 
 		if ( ! is_array( $urls ) ) {
 			$urls = array( $urls );
@@ -901,7 +915,7 @@ abstract class Keyring_Importer_Base {
  */
 add_action( 'init', function() {
 	// Only create the taxonomy if it's not there already
-	if ( !taxonomy_exists( 'keyring_services' ) ) {
+	if ( ! taxonomy_exists( 'keyring_services' ) ) {
 		register_taxonomy(
 			'keyring_services',
 			'post',
@@ -964,7 +978,7 @@ function keyring_register_importer( $slug, $class, $plugin, $info = false ) {
 	// Check if this importer is already configured to auto-import
 	$options = get_option( 'keyring_' . $slug . '_importer' );
 	if ( ! empty( $options['auto_import'] ) && ! empty( $options['token'] ) ) {
-		$name = '&#10003; ' . $name; // Add a checkmark to indiciate it's on auto
+		$name = '&#10003; ' . $name; // Add a checkmark to indicate it's on auto
 	}
 
 	register_importer(

@@ -251,12 +251,15 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 
 	function insert_posts() {
 		// These are needed to handle directly downloading images from Nest
-		if ( !function_exists( 'media_sideload_image' ) )
+		if ( ! function_exists( 'media_sideload_image' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
-		if ( !function_exists( 'download_url' ) )
+		}
+		if ( ! function_exists( 'download_url' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
-		if ( !function_exists( 'wp_read_image_metadata' ) )
+		}
+		if ( ! function_exists( 'wp_read_image_metadata' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
 
 		global $wpdb;
 		$imported = 0;

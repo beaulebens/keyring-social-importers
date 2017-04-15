@@ -31,11 +31,11 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
-		if ( empty( $_POST['category'] ) || !ctype_digit( $_POST['category'] ) ) {
+		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your activities into." ) );
 		}
 
-		if ( empty( $_POST['author'] ) || !ctype_digit( $_POST['author'] ) ) {
+		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
 			$this->error( __( "You must select an author to assign to all activities." ) );
 		}
 
@@ -95,7 +95,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 		}
 
 		// Make sure we have some trips to parse
-		if ( !is_object( $importdata ) || !count( $importdata->AirObject ) ) {
+		if ( ! is_object( $importdata ) || ! count( $importdata->AirObject ) ) {
 			$this->finished = true;
 			return;
 		}
@@ -322,8 +322,9 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				// Update Category + Tags
 				wp_set_post_categories( $post_id, $post_category );
 
-				if ( count( $tags ) )
+				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
+				}
 
 				add_post_meta( $post_id, 'tripit_id', $tripit_id );
 
