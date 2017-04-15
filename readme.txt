@@ -1,8 +1,8 @@
 === Keyring Social Importers ===
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
-Requires at least: 3.3
-Tested up to: 4.7.2
-Stable Tag: 1.7
+Requires at least: 4.0
+Tested up to: 4.7.3
+Stable Tag: 1.8
 
 Import your posts/images/etc from Twitter, Instagram, Pinterest, and more into your WordPress install. Own your content.
 
@@ -22,6 +22,7 @@ Importers included currently:
 * [Foursquare/Swarm](https://foursquare.com/)
 * [Instagram](https://instagram.com/)
 * [Instapaper](https://instapaper.com/)
+* [Jetpack](https://jetpack.com/)/[WordPress.com](https://wordpress.com/)
 * [Moves](https://moves-app.com/)
 * [Nest Cameras](https://nest.com/camera/meet-nest-cam/)
 * [Pinterest](https://pinterest.com/)
@@ -81,6 +82,11 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Uses the title from the document in Instapaper, if there is a description associated then it uses that as well.
 * NEW: Downloads the full content of the article using Instapaper's API, and stores that *in the post content*, so that you can search it later. Disable it by creating a stub plugin, or dropping this in your theme's functions.php; add_filter( 'keyring_instapaper_download_article_texts', '__return_false' );
 
+= Jetpack/WordPress.com =
+* Import posts from either self-hosted, or hosted copies of WordPress, via the Jetpack/WordPress.com API.
+* Post author is always overridden.
+* Tags, content, title, excerpt are all carried over.
+
 = Moves =
 * Imports your data daily.
 * Creates a summary post, which is a bulleted list detailing each category of activity for the day.
@@ -114,6 +120,11 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs).
 
 == Changelog ==
+
+= 1.8 =
+* Enhancement: Added a Jetpack/WordPress.com importer.
+* Enhancement: Fix Twitter importer so that it correctly obeys the option to import retweets. Props @glueckpress for reporting.
+* Enhancement: Lots of code cleanup/linting.
 
 = 1.7 =
 * Enhancement: Places support for Nest and TripIt importers.
