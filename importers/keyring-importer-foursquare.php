@@ -10,6 +10,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 	const LABEL             = 'Foursquare';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = 'Keyring_Service_Foursquare';    // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
+	const NUM_PER_LOAD      = 100; // How many check-ins per API request?
 
 	function __construct() {
 		parent::__construct();
@@ -71,7 +72,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 	function build_request_url() {
 		// Base request URL
-		$url = "https://api.foursquare.com/v2/users/" . $this->get_option( 'user_id', 'self' ) . "/checkins?limit=200";
+		$url = "https://api.foursquare.com/v2/users/" . $this->get_option( 'user_id', 'self' ) . "/checkins?limit=" . self::NUM_PER_LOAD;
 
 		if ( $this->auto_import ) {
 			// Get most recent checkin we've imported (if any), and its date so that we can get new ones since then
@@ -93,7 +94,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 			}
 		} else {
 			// Handle page offsets (only for non-auto-import requests)
-			$url = add_query_arg( 'offset', $this->get_option( 'page', 0 ) * 200, $url );
+			$url = add_query_arg( 'offset', $this->get_option( 'page', 0 ) * self::NUM_PER_LOAD, $url );
 		}
 
 		return $url;
@@ -188,6 +189,13 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 						'name' => trim( $with->firstName . ' ' . $with->lastName )
 					);
 				}
+			}
+
+			// And if you were checked in by someone else, add them as well
+			if ( ! empty( $post->createdBy ) ) {
+				$people[ $post->createdBy->id ] = array(
+					'name' => trim( $post->createdBy->firstName . ' ' . $post->createdBy->lastName )
+				);
 			}
 
 			// Extract specific details of the place/venue
