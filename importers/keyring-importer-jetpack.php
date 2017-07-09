@@ -174,15 +174,31 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 			$post_date_gmt = date( 'Y-m-d H:i:s', strtotime( $post->date ) );
 			$post_date     = get_date_from_gmt( $post_date_gmt );
 
-			// Apply selected category (ignores the categories from the original post)
+			// Apply selected category (intentionally ignores the categories from the original post)
 			$post_category = array( $this->get_option( 'category' ) );
 
 			// Get the default/forced ones, and merge with tags from the post
 			$tags = array_merge( $this->get_option( 'tags' ), array_keys( (array) $post->tags ) );
 
+			// Postmeta
+			$meta = array();
+			foreach ( (array) $post->metadata as $postmeta ) {
+				if ( '_' == substr( $postmeta->key, 0, 1 ) ) {
+					continue; // skip private meta
+				}
+				$meta[ $postmeta->key ] = $postmeta->value;
+			}
+
+			// Featured Image
+			$featured_image = false;
+			if ( !empty( $post->post_thumbnail ) ) {
+				$featured_image = $post->post_thumbnail->URL;
+			}
+
+			// Basic post details
 			$href = $post->URL;
 			$post_content = $post->content;
-			$post_excerpt = $post->excerpt;
+			$post_excerpt = trim( $post->excerpt );
 
 			// Other bits
 			$post_author = $this->get_option( 'author' );
@@ -202,6 +218,8 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 				'post_status',
 				'post_format',
 				'post_category',
+				'meta',
+				'featured_image',
 				'tags',
 				'href',
 				'jetpack_id',
@@ -248,9 +266,24 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'jetpack_id', $jetpack_id );
 				add_post_meta( $post_id, 'href', $href );
 
+				// Apply default + imported tags
 				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 				}
+
+				// Add any custom postmeta found in the import
+				if ( count( $meta ) ) {
+					foreach ( $meta as $key => $val ) {
+						add_post_meta( $post_id, $key, $val );
+					}
+				}
+
+				// If there's a featured image, then sideload and apply it
+				if ( $featured_image ) {
+					$this->sideload_media( $featured_image, $post_id, $post, apply_filters( 'keyring_jetpack_importer_image_embed_size', 'full' ), 'featured' );
+				}
+
+				// @todo Parse and sideload any media contained in the post itself
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $jetpack_raw ) ) );
 

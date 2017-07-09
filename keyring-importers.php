@@ -821,9 +821,10 @@ abstract class Keyring_Importer_Base {
 
 	/**
 	 * This is a helper for downloading/attaching/inserting media into a post when it's
-	 * being imported. See Flickr/Instagram for examples
+	 * being imported. See Flickr/Instagram for examples.
+	 *
 	 */
-	function sideload_media( $urls, $post_id, $post, $size = 'large', $append = false ) {
+	function sideload_media( $urls, $post_id, $post, $size = 'large', $where = 'prepend' ) {
 		if ( ! function_exists( 'media_sideload_image' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		}
@@ -869,16 +870,16 @@ abstract class Keyring_Importer_Base {
 					// Regex out the previous img tag, put this one in there instead, or prepend it to the top/bottom, depending on $append
 					if ( stristr( $post['post_content'], $url ) ) {
 						$post['post_content'] = preg_replace( '!<img\s[^>]*src=[\'"]' . preg_quote( $url ) . '[\'"][^>]*>!', $img, $post['post_content'] ) . "\n";
-					} else if ( $append ) {
+					} else if ( 'append' == $where ) {
 						$post['post_content'] = $post['post_content'] . "\n\n" .  $img;
-					} else {
+					} else if ( 'prepend' == $where ) {
 						$post['post_content'] = $img . "\n\n" . $post['post_content'];
 					}
 				}
-			}
 
-			$post['ID'] = $post_id;
-			wp_update_post( $post );
+				$post['ID'] = $post_id;
+				wp_update_post( $post );
+			}
 		}
 	}
 
