@@ -36,6 +36,16 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				);
 				return $reprocessors;
 			} );
+
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-createdBy' ] = array(
+					'label'       => __( 'Someone else checked you in to Swarm', 'keyring' ),
+					'description' => __( 'Detects when a Swarm/Foursquare check-in was created by someone else on your behalf, and assumes you were there with them, so it creates a reference to their "Person".', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_createdBy' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
 		}
 	}
 
@@ -407,6 +417,39 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 					$post->ID
 				);
 			}
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Reprocess a $post and identify/link up People if someone else checked
+	 * you in.
+	 */
+	function reprocess_createdBy( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Someone else created this check-in
+		if ( ! empty( $raw->createdBy ) ) {
+			People_Places::add_person_to_post(
+				static::SLUG,
+				$raw->createdBy->id,
+				array(
+					'name' => trim( $raw->createdBy->firstName . ' ' . ( ! empty( $raw->createdBy->lastName ) ? $raw->createdBy->lastName : '' ) ),
+					'id'   => $raw->createdBy->id
+				),
+				$post->ID
+			);
 		}
 
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
