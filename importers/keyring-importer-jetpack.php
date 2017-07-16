@@ -15,6 +15,17 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 	function __construct() {
 		parent::__construct();
+
+		add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+			$reprocessors[ 'jetpack-featured-meta' ] = array(
+				'label'       => __( 'Jetpack postmeta and Featured Images', 'keyring' ),
+				'description' => __( 'Download and attach featured images, properly import postmeta, and sideload all the images in posts. WARNING: Will likely end up downloading a lot of media/images.', 'keyring' ),
+				'callback'    => array( $this, 'reprocess_featured_meta' ),
+				'service'     => $this->taxonomy->slug,
+			);
+			return $reprocessors;
+		} );
+
 		add_action( 'keyring_importer_jetpack_custom_options', array( $this, 'custom_options' ) );
 		add_filter( 'wp_head', array( $this, 'wp_head' ), 1 );
 	}
@@ -278,12 +289,17 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 					}
 				}
 
-				// If there's a featured image, then sideload and apply it
+				// Parse out and sideload any media contained in the post itself
+				preg_match_all( '!<img\s[^>]*src=[\'"]([^\'"]+)[\'"][^>]*>!', $post_content, $matches );
+				if ( ! empty( $matches[1] ) ) {
+					$this->sideload_media( array_values( $matches[1] ), $post_id, $post, apply_filters( 'keyring_jetpack_importer_image_embed_size', 'full' ), 'inline' );
+				}
+
+				// If there's a featured image, then sideload and apply it.
+				// Do this after the previous media check to make sure Featured Image is set correctly.
 				if ( $featured_image ) {
 					$this->sideload_media( $featured_image, $post_id, $post, apply_filters( 'keyring_jetpack_importer_image_embed_size', 'full' ), 'featured' );
 				}
-
-				// @todo Parse and sideload any media contained in the post itself
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $jetpack_raw ) ) );
 
@@ -296,6 +312,45 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 		// Return, so that the handler can output info (or update DB, or whatever)
 		return array( 'imported' => $imported, 'skipped' => $skipped );
+	}
+
+	/**
+	 * Download and attach Featured images, add postmeta, and sideload all
+	 * images in posts.
+	 */
+	function reprocess_featured_meta( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Pull out and apply postmeta
+		if ( ! empty( $raw->metadata ) ) {
+			foreach ( $raw->metadata as $meta ) {
+				update_post_meta( $post->ID, $meta->key, $meta->value );
+			}
+		}
+
+		// Parse out and sideload any media contained in the post itself
+		preg_match_all( '!<img\s[^>]*src=[\'"]([^\'"]+)[\'"][^>]*>!', $raw->content, $matches );
+		if ( count( $matches ) && ! empty( $matches[1] ) ) {
+			$this->sideload_media( array_values( $matches[1] ), $post->ID, (array) $post, apply_filters( 'keyring_jetpack_importer_image_embed_size', 'full' ), 'inline' );
+		}
+
+		// If there's a featured image, then sideload and apply it.
+		// Do this after the previous media check to make sure Featured Image is set correctly.
+		if ( $raw->post_thumbnail ) {
+			$this->sideload_media( $raw->post_thumbnail->URL, $post->ID, (array) $post, apply_filters( 'keyring_jetpack_importer_image_embed_size', 'full' ), 'featured' );
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
 	}
 }
 
