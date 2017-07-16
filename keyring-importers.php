@@ -822,6 +822,11 @@ abstract class Keyring_Importer_Base {
 	/**
 	 * This is a helper for downloading/attaching/inserting media into a post when it's
 	 * being imported. See Flickr/Instagram for examples.
+	 * @param Array of $urls
+	 * @param Int post ID
+	 * @param Array post object
+	 * @param String size of images (large, medium, small)
+	 * @param String what to do with the images. Always updated inline. Optionally append/prepend if not found in content
 	 *
 	 */
 	function sideload_media( $urls, $post_id, $post, $size = 'large', $where = 'prepend' ) {
@@ -839,48 +844,49 @@ abstract class Keyring_Importer_Base {
 			$urls = array( $urls );
 		}
 
-		$do_update = false;
-		foreach( $urls as $url ) {
-			$img = media_sideload_image( $url, $post_id, $post['post_title'] );
-			if ( is_string( $img ) ) {
-				$do_update = true;
+		// Get the base uploads directory so that we can skip things in there
+		$dir = wp_get_upload_dir();
+		$dir = $dir['baseurl'];
+
+		$orig_content = $post['post_content'];
+		foreach( $urls as $num => $url ) {
+			// Skip completely if this URL appears to already be local
+			if ( false !== stristr( $url, $dir ) ) {
+				continue;
 			}
-		}
 
-		if ( true === $do_update ) {
-			$attachments = get_posts(
-				array(
-					'post_parent'    => $post_id,
-					'post_type'      => 'attachment',
-					'post_mime_type' => 'image',
-				)
-			);
-
-			if ( $attachments ) {
-				// Set the first image as the Featured Image for this post
-				set_post_thumbnail( $post_id, $attachments[0]->ID );
-
-				// Re-embed the sideloaded version of each image
-				foreach( $attachments as $key => $image ) {
-					$data = wp_get_attachment_image_src( $image->ID, $size );
-					if ( $data ) {
-						$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
-					}
-
-					// Regex out the previous img tag, put this one in there instead, or prepend it to the top/bottom, depending on $append
-					if ( stristr( $post['post_content'], $url ) ) {
-						$post['post_content'] = preg_replace( '!<img\s[^>]*src=[\'"]' . preg_quote( $url ) . '[\'"][^>]*>!', $img, $post['post_content'] ) . "\n";
-					} else if ( 'append' == $where ) {
-						$post['post_content'] = $post['post_content'] . "\n\n" .  $img;
-					} else if ( 'prepend' == $where ) {
-						$post['post_content'] = $img . "\n\n" . $post['post_content'];
-					}
+			// Attempt to download/attach the media to this post
+			$id = media_sideload_image( $url, $post_id, $post['post_title'], 'id' );
+			if ( ! is_wp_error( $id ) ) {
+				if ( 0 === $num ) {
+					// Set the first successfully processed image as Featured
+					set_post_thumbnail( $post_id, $id );
 				}
 
-				$post['ID'] = $post_id;
-				wp_update_post( $post );
+				// Update the post to reference the new local image
+				$data = wp_get_attachment_image_src( $id, $size );
+				if ( $data ) {
+					$img = '<img src="' . esc_url( $data[0] ) . '" width="' . esc_attr( $data[1] ) . '" height="' . esc_attr( $data[2] ) . '" alt="' . esc_attr( $post['post_title'] ) . '" class="keyring-img" />';
+				}
+
+				// Regex out the previous img tag, put this one in there instead, or prepend it to the top/bottom, depending on $append
+				if ( stristr( $post['post_content'], $url ) ) { // always do this if the image is in there already
+					$post['post_content'] = preg_replace( '!<img\s[^>]*src=[\'"]' . preg_quote( $url ) . '[\'"][^>]*>!', $img, $post['post_content'] ) . "\n";
+				} else if ( 'append' == $where ) {
+					$post['post_content'] = $post['post_content'] . "\n\n" .  $img;
+				} else if ( 'prepend' == $where ) {
+					$post['post_content'] = $img . "\n\n" . $post['post_content'];
+				}
 			}
 		}
+
+		// Update and we're out
+		if ( $post['post_content'] !== $orig_content ) {
+			$post['ID'] = $post_id;
+			return wp_update_post( $post );
+		}
+
+		return true;
 	}
 
 	/**
