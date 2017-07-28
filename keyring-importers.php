@@ -648,6 +648,8 @@ abstract class Keyring_Importer_Base {
 		do_action( 'import_start' );
 		$num = 0;
 		$this->header();
+		$stop_after_imported_count = apply_filters( 'keyring_importer_stop_after_imported_count', null ); 
+
 		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
 		echo '<ol>';
 		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
@@ -675,6 +677,11 @@ abstract class Keyring_Importer_Base {
 
 			// Local (per-page-load) counter
 			$num++;
+
+			if ( isset( $stop_after_imported_count ) && ( $this->get_option( 'imported' ) >= $stop_after_imported_count ) ) {
+				$this->finished = true;
+			}
+
 		}
 		echo '</ol>';
 		$this->footer();
