@@ -647,6 +647,8 @@ abstract class Keyring_Importer_Base {
 		do_action( 'import_start' );
 		$num = 0;
 		$this->header();
+		$stop_after_import_requests = apply_filters( 'keyring_importer_stop_after_import_requests', false );
+
 		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
 		echo '<ol>';
 		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
@@ -667,6 +669,11 @@ abstract class Keyring_Importer_Base {
 				echo '<li>' . sprintf( __( 'Imported %d posts in this batch' ), $result['imported'] ) . ( $result['skipped'] ? sprintf( __( ' (skipped %d that looked like duplicates).' ), $result['skipped'] ) : '.' ) . '</li>';
 				flush();
 				$this->set_option( 'imported', ( $this->get_option( 'imported' ) + $result['imported'] ) );
+			}
+
+			if ( $stop_after_import_requests && ( $this->get_option( 'imported' ) >= $stop_after_import_requests ) ) {
+				$this->finished = true;
+				break; // Break to avoid incrementing `page`
 			}
 
 			// Keep track of which "page" we're up to
