@@ -83,7 +83,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 	function build_request_url() {
 		// Base request URL
-		$url = "https://api.instagram.com/v1/users/self/media/recent/?count=" . self::NUM_PER_REQUEST;
+		$url = "https://api.instagram.com/v1/users/" . (int) $this->service->get_token()->get_meta( 'user_id' ) . "/media/recent/?count=" . self::NUM_PER_REQUEST;
 
 		if ( $this->auto_import ) {
 			// Get most recent image we've imported (if any), and its date so that we can get new ones since then
@@ -108,11 +108,11 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 		// If we have already imported some, then import around that
 		if ( $latest ) {
-			$latest_timestamp = mysql2date( 'G', $latest[0]->post_date_gmt );
+			$latest_id = get_post_meta( $latest[0]->ID, 'instagram_id', true );
 			if ( $this->auto_import ) {
-				$url = add_query_arg( 'min_timestamp', $latest_timestamp + 1, $url );
+				$url = add_query_arg( 'min_id', $latest_id, $url );
 			} else {
-				$url = add_query_arg( 'max_timestamp', $latest_timestamp, $url );
+				$url = add_query_arg( 'max_id', $latest_id, $url );
 			}
 		}
 
