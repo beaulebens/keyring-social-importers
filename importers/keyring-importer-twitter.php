@@ -38,6 +38,17 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 				return $reprocessors;
 			} );
 		}
+
+		// Fix shortened links in Twitter importer
+		add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+			$reprocessors[ 'twitter-shortlinks' ] = array(
+				'label'       => __( 'Expand shortened links in Tweets', 'keyring' ),
+				'description' => __( 'Old tweets preserved the Twitter link shortener version of URLs. The importer handles them correctly now, and this will reprocess old data to use the full URL.', 'keyring' ),
+				'callback'    => array( $this, 'reprocess_shortened_links' ),
+				'service'     => $this->taxonomy->slug,
+			);
+			return $reprocessors;
+		} );
 	}
 
 	function custom_options() {
@@ -216,6 +227,34 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			// Better content for retweets
 			if ( ! empty( $post->retweeted_status ) ) {
 				$post_content = $post->retweeted_status->text;
+
+				// Replace any RETWEETED shortened URLs with the real thing
+				if ( ! empty( $post->retweeted_status->entities->urls ) ) {
+					foreach ( $post->retweeted_status->entities->urls as $url ) {
+						$post_content = str_replace( $url->url, esc_url( $url->expanded_url ), $post_content );
+					}
+				}
+
+				// Include any RETWEETED media URLs
+				if ( ! empty( $post->retweeted_status->extended_entities->media ) ) {
+					foreach ( $post->retweeted_status->extended_entities->media as $image ) {
+						$post_content = str_replace( $image->url, esc_url( $image->expanded_url ), $post_content );
+					}
+				}
+			}
+
+			// Replace any shortened URLs with the real thing
+			if ( ! empty( $post->entities->urls ) ) {
+				foreach ( $post->entities->urls as $url ) {
+					$post_content = str_replace( $url->url, esc_url( $url->expanded_url ), $post_content );
+				}
+			}
+			
+			// Include any media URLs
+			if ( ! empty( $post->extended_entities->media ) ) {
+				foreach ( $post->extended_entities->media as $image ) {
+					$post_content = str_replace( $image->url, esc_url( $image->expanded_url ), $post_content );
+				}
 			}
 
 			// Clean up post content for insertion
@@ -390,34 +429,34 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 	 * Reprocess a $post and identify/link up People.
 	 */
 	function reprocess_people( $post ) {
- 		// Get raw data
- 		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
- 		if ( ! $raw ) {
- 			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
- 		}
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
 
- 		// Decode it, and bail if that fails for some reason
- 		$raw = json_decode( $raw );
- 		if ( null === $raw ) {
- 			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
- 		}
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null === $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
 
- 		// Mentions
- 		if ( ! empty( $raw->entities->user_mentions ) ) {
- 			foreach ( $raw->entities->user_mentions as $user ) {
- 				People_Places::add_person_to_post(
- 					static::SLUG,
- 					$user->screen_name,
- 					array(
- 						'name' => trim( $user->name )
- 					),
- 					$post->ID
- 				);
- 			}
- 		}
+		// Mentions
+		if ( ! empty( $raw->entities->user_mentions ) ) {
+			foreach ( $raw->entities->user_mentions as $user ) {
+				People_Places::add_person_to_post(
+					static::SLUG,
+					$user->screen_name,
+					array(
+						'name' => trim( $user->name )
+					),
+					$post->ID
+				);
+			}
+		}
 
- 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
- 	}
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
 
 	/**
 	 * Don't botch the escaping on newlines.
@@ -459,6 +498,66 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		$post_data->post_content = $post_content;
 		wp_update_post( $post_data );
 
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/*
+	 * Fix shortened links
+	 */
+	function reprocess_shortened_links( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null === $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Don't bother if there are no URLs to replace
+		if ( empty( $raw->entities->urls ) && empty( $raw->extended_entities->media ) ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// We start with the current post content instead of the original raw tweet,
+		// since the import does some adjusting and polishing we don't want to lose.
+		$post_content = $post->post_content;
+
+		// Replace any URLs
+		if ( ! empty( $raw->entities->urls ) ) {
+			foreach ( $raw->entities->urls as $url ) {
+				$post_content = str_replace( $url->url, esc_url( $url->expanded_url ), $post_content );
+			}
+		}
+
+		// Include any media URLs
+		if ( ! empty( $raw->extended_entities->media ) ) {
+			foreach ( $raw->extended_entities->media as $image ) {
+				$post_content = str_replace( $image->url, esc_url( $image->expanded_url ), $post_content );
+			}
+		}
+
+		// Replace any RETWEET URLs
+		if ( ! empty( $raw->retweeted_status->entities->urls ) ) {
+			foreach ( $raw->retweeted_status->entities->urls as $url ) {
+				$post_content = str_replace( $url->url, esc_url( $url->expanded_url ), $post_content );
+			}
+		}
+
+		// Include any RETWEET media URLs
+		if ( ! empty( $raw->retweeted_status->extended_entities->media ) ) {
+			foreach ( $raw->retweeted_status->extended_entities->media as $image ) {
+				$post_content = str_replace( $image->url, esc_url( $image->expanded_url ), $post_content );
+			}
+		}
+
+		// Update the post with the fixed content
+		$post_data = get_post( $post->ID );
+		$post_data->post_content = $post_content;
+		wp_update_post( $post_data );
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
 	}
 }
