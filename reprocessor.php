@@ -50,7 +50,6 @@ class Keyring_Importer_Reprocessor {
 			#auto-message { margin-left: 10px; }
 		</style>
 		<div class="wrap keyring-importer">
-		<?php screen_icon(); ?>
 		<h2><?php _e( 'Reprocess Keyring Data', 'keyring' ); ?></h2><?php
 	}
 
