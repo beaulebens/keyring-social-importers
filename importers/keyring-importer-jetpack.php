@@ -36,6 +36,7 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 			return;
 		}
 
+		// Force noindex on pages that will contain imported content to avoid dupes in search engines
 		if ( has_term( self::SLUG, 'keyring_services', get_queried_object() ) ) {
 			echo '<meta name="robots" content="noindex,follow" >';
 		}
@@ -73,15 +74,15 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 		// Validate options and store them so they can be used in auto-imports
 
 		if ( empty( $_POST['site'] ) || ! ctype_digit( $_POST['site'] )  ) {
-			$this->error( __( "You must select a site from which to import posts." ) );
+			$this->error( __( "You must select a site from which to import posts.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your links into." ) );
+			$this->error( __( "Make sure you select a valid category to import your links into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all imported links." ) );
+			$this->error( __( "You must select an author to assign to all imported links.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -161,13 +162,13 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-jetpack-importer-failed-download', __( 'Failed to download or parse posts from WordPress.com. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-jetpack-importer-failed-download', __( 'Failed to download or parse posts from WordPress.com. Please wait a few minutes and try again.', 'keyring' ) );
 		}
 
 		// .found should be there
 		if ( ! property_exists( $importdata, 'found' ) || ! property_exists( $importdata, 'posts' ) ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-jetpack-importer-no-posts', __( 'No posts were found for the site.' ) );
+			return new Keyring_Error( 'keyring-jetpack-importer-no-posts', __( 'No posts were found for the site.', 'keyring' ) );
 		}
 
 		// if .found is 0, then we have no posts, we're done

@@ -52,11 +52,11 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your checkins into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all checkins." ) );
+			$this->error( __( "You must select an author to assign to all checkins.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -115,7 +115,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-foursquare-importer-failed-download', __( 'Failed to download your checkins from foursquare. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-foursquare-importer-failed-download', __( 'Failed to download your checkins from foursquare. Please wait a few minutes and try again.', 'keyring' ) );
 		}
 
 		// Make sure we have some checkins to parse
@@ -207,6 +207,8 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 					'name' => trim( $post->createdBy->firstName . ' ' . $post->createdBy->lastName )
 				);
 			}
+
+			// @todo also look in $post->entities for type=user (mentions in shout)
 
 			// Extract specific details of the place/venue
 			$place = array();
@@ -474,16 +476,16 @@ add_action( 'init', function() {
 	if ( class_exists( 'People_Places') ) {
 		Taxonomy_Meta::add( 'people', array(
 			'key'   => 'foursquare',
-			'label' => __( 'Foursquare id' ),
+			'label' => __( 'Foursquare id', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "This person's Foursquare id." ),
+			'help'  => __( "This person's Foursquare id.", 'keyring' ),
 			'table' => false,
 		) );
 		Taxonomy_Meta::add( 'places', array(
 			'key'   => 'foursquare',
-			'label' => __( 'Foursquare Venue id' ),
+			'label' => __( 'Foursquare Venue id', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "Unique identifier from Foursquare (md5-looking hash)." ),
+			'help'  => __( "Unique identifier from Foursquare (md5-looking hash).", 'keyring' ),
 			'table' => false,
 		) );
 

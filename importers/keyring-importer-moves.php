@@ -14,11 +14,11 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your storyline posts into." ) );
+			$this->error( __( "Make sure you select a valid category to import your storyline posts into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all storylines." ) );
+			$this->error( __( "You must select an author to assign to all storylines.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -140,7 +140,7 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 				switch ( $type ) {
 				case 'wlk':
 					$post_strings[] = sprintf(
-						__( 'Walked %1$s (%2$s steps) in %3$s, burning %4$s calories.' ),
+						__( 'Walked %1$s (%2$s steps) in %3$s, burning %4$s calories.', 'keyring' ),
 						$this->format_distance( $summary['wlk']['distance'] ),
 						number_format_i18n( $summary['wlk']['steps'] ),
 						$this->format_duration( $summary['wlk']['duration'] ),
@@ -150,7 +150,7 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 
 				case 'run':
 					$post_strings[] = sprintf(
-						__( 'Ran %1$s (%2$s steps) in %3$s, burning %4$s calories.' ),
+						__( 'Ran %1$s (%2$s steps) in %3$s, burning %4$s calories.', 'keyring' ),
 						$this->format_distance( $summary['run']['distance'] ),
 						number_format_i18n( $summary['run']['steps'] ),
 						$this->format_duration( $summary['run']['duration'] ),
@@ -160,7 +160,7 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 
 				case 'cyc':
 					$post_strings[] = sprintf(
-						__( 'Cycled %1$s in %2$s, burning %3$s calories.' ),
+						__( 'Cycled %1$s in %2$s, burning %3$s calories.', 'keyring' ),
 						$this->format_distance( $summary['cyc']['distance'] ),
 						$this->format_duration( $summary['cyc']['duration'] ),
 						number_format_i18n( $summary['cyc']['calories'] )
@@ -169,7 +169,7 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 
 				case 'trp':
 					$post_strings[] = sprintf(
-						__( 'Took transit for %1$s, covering %2$s.' ),
+						__( 'Took transit for %1$s, covering %2$s.', 'keyring' ),
 						$this->format_duration( $summary['trp']['duration'] ),
 						$this->format_distance( $summary['trp']['distance'] )
 					);

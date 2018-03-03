@@ -41,7 +41,7 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				$schedule = $this->get_option( 'schedule' );
 				$label    = array();
 				echo '<tr><th>' . __( 'Cameras' ) . '</th><td>';
-				echo '<p class="description">' . __( 'Ctrl/Cmd-click, or drag, to select multiple times to take a snapshot from each camera.' ) . '</p>';
+				echo '<p class="description">' . __( 'Ctrl/Cmd-click, or drag, to select multiple times to take a snapshot from each camera.', 'keyring' ) . '</p>';
 				echo '<ul class="cameras">';
 				foreach ( $response->devices->cameras as $id => $camera ) {
 					if ( empty( $schedule[$id] ) ) {
@@ -94,11 +94,11 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your pins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your snapshots into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all pins." ) );
+			$this->error( __( "You must select an author to assign to all snapshots.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -362,9 +362,9 @@ add_action( 'init', function() {
 	if ( class_exists( 'People_Places') ) {
 		Taxonomy_Meta::add( 'places', array(
 			'key'   => 'nest',
-			'label' => __( 'Nest Location id' ),
+			'label' => __( 'Nest Location id', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "Unique identifier from Nest (unique-looking hash)." ),
+			'help'  => __( "Unique identifier from Nest (unique-looking hash).", 'keyring' ),
 			'table' => false,
 		) );
 	}

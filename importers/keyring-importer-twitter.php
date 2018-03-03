@@ -79,11 +79,11 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your checkins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your checkins into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all checkins." ) );
+			$this->error( __( "You must select an author to assign to all checkins.", 'keyring' ) );
 		}
 
 		if ( ! empty( $_POST['auto_import'] ) ) {
@@ -249,7 +249,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 					$post_content = str_replace( $url->url, esc_url( $url->expanded_url ), $post_content );
 				}
 			}
-			
+
 			// Include any media URLs
 			if ( ! empty( $post->extended_entities->media ) ) {
 				foreach ( $post->extended_entities->media as $image ) {
@@ -580,17 +580,17 @@ add_action( 'init', function() {
 	if ( class_exists( 'People_Places') ) {
 		Taxonomy_Meta::add( 'people', array(
 			'key'   => 'twitter',
-			'label' => __( 'Twitter screen name' ),
+			'label' => __( 'Twitter screen name', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "This person's Twitter screen/user name (without the '@')." ),
+			'help'  => __( "This person's Twitter screen/user name (without the '@').", 'keyring' ),
 			'table' => true,
 		) );
 
 		Taxonomy_Meta::add( 'places', array(
 			'key'   => 'twitter',
-			'label' => __( 'Twitter Location id' ),
+			'label' => __( 'Twitter Location id', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "Unique identifier from Twitter, for this location." ),
+			'help'  => __( "Unique identifier from Twitter, for this location.", 'keyring' ),
 			'table' => false,
 		) );
 

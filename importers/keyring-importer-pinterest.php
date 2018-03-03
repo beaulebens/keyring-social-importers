@@ -16,11 +16,11 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your pins into." ) );
+			$this->error( __( "Make sure you select a valid category to import your pins into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all pins." ) );
+			$this->error( __( "You must select an author to assign to all pins.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {

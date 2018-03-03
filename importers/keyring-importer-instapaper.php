@@ -28,6 +28,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 			return;
 		}
 
+		// Force noindex on pages that (potentially) contain imported content, to avoid SEO problems
 		if ( has_term( self::SLUG, 'keyring_services', get_queried_object() ) ) {
 			echo '<meta name="robots" content="noindex,follow" >';
 		}
@@ -36,11 +37,11 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your links into." ) );
+			$this->error( __( "Make sure you select a valid category to import your links into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all imported links." ) );
+			$this->error( __( "You must select an author to assign to all imported links.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -82,7 +83,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-instapaper-importer-failed-download', __( 'Failed to download or parse your links from Instapaper. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-instapaper-importer-failed-download', __( 'Failed to download or parse your links from Instapaper. Please wait a few minutes and try again.', 'keyring' ) );
 		}
 
 		// Make sure we have some bookmarks to parse

@@ -32,11 +32,11 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your activities into." ) );
+			$this->error( __( "Make sure you select a valid category to import your activities into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all activities." ) );
+			$this->error( __( "You must select an author to assign to all activities.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -91,7 +91,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 		if ( null === $importdata ) {
 			$this->finished = true;
-			return new Keyring_Error( 'keyring-tripit-importer-failed-download', __( 'Failed to download your trips from TripIt. Please wait a few minutes and try again.' ) );
+			return new Keyring_Error( 'keyring-tripit-importer-failed-download', __( 'Failed to download your trips from TripIt. Please wait a few minutes and try again.', 'keyring' ) );
 		}
 
 		// Make sure we have some trips to parse
@@ -462,9 +462,9 @@ add_action( 'init', function() {
 	if ( class_exists( 'People_Places') ) {
 		Taxonomy_Meta::add( 'places', array(
 			'key'   => 'tripit',
-			'label' => __( 'Airport code' ),
+			'label' => __( 'Airport code', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "3-character airport code (IATA)." ),
+			'help'  => __( "3-character airport code (IATA).", 'keyring' ),
 			'table' => false,
 		) );
 	}

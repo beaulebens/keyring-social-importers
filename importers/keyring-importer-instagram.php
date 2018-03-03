@@ -53,11 +53,11 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
-			$this->error( __( "Make sure you select a valid category to import your pictures into." ) );
+			$this->error( __( "Make sure you select a valid category to import your pictures into.", 'keyring' ) );
 		}
 
 		if ( empty( $_POST['author'] ) || ! ctype_digit( $_POST['author'] ) ) {
-			$this->error( __( "You must select an author to assign to all pictures." ) );
+			$this->error( __( "You must select an author to assign to all pictures.", 'keyring' ) );
 		}
 
 		if ( isset( $_POST['auto_import'] ) ) {
@@ -510,9 +510,9 @@ add_action( 'init', function() {
 	if ( class_exists( 'People_Places') ) {
 		Taxonomy_Meta::add( 'people', array(
 			'key'   => 'instagram',
-			'label' => __( 'Instagram username' ),
+			'label' => __( 'Instagram username', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "This person's Instagram username." ),
+			'help'  => __( "This person's Instagram username.", 'keyring' ),
 			'table' => true,
 		) );
 
