@@ -121,6 +121,17 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 == Changelog ==
 
+=  =
+* Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
+* Enhancement: Now handles Featured Image and all post meta on Jetpack imports.
+* Enhancement: Remove deprecated calls to `screen_icon()`
+* Enhancement: Reprocessor for expanding old short URLs for Twitter included. Props @chrishardie.
+* Enhancement: Added a filter `keyring_importer_posts_pre_insert` which allows you to filter all post content before posts are imported/created.
+* Change: `sideload_media`'s last argument has changed to allow more flexibility.
+* Bugfix: `sideload_media` previously didn't handle multiple URLs properly. Now it should.
+* Bugfix: Shortened URLs are expanded correctly for Twitter now. Props @chrishardie.
+* Bugfix: Updated Instagram to use max/min_id rather than timestamps for looping through media.
+
 = 1.8 =
 * Enhancement: Added a Jetpack/WordPress.com importer.
 * Enhancement: Fix Twitter importer so that it correctly obeys the option to import retweets. Props @glueckpress for reporting.

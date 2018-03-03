@@ -649,7 +649,7 @@ abstract class Keyring_Importer_Base {
 		$this->header();
 		$stop_after_import_requests = apply_filters( 'keyring_importer_stop_after_import_requests', false );
 
-		echo '<p>' . __( 'Importing Posts...' ) . '</p>';
+		echo '<p>' . __( 'Importing Posts...', 'keyring' ) . '</p>';
 		echo '<ol>';
 		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
 			$data = $this->make_request();
@@ -662,11 +662,14 @@ abstract class Keyring_Importer_Base {
 				return $result;
 			}
 
+			// Use this filter to modify any/all posts before they are actually inserted as posts
+			$this->posts = apply_filters( 'keyring_importer_posts_pre_insert', $this->posts, $this->service->get_name() );
+
 			$result = $this->insert_posts();
 			if ( Keyring_Util::is_error( $result ) ) {
 				return $result;
 			} else {
-				echo '<li>' . sprintf( __( 'Imported %d posts in this batch' ), $result['imported'] ) . ( $result['skipped'] ? sprintf( __( ' (skipped %d that looked like duplicates).' ), $result['skipped'] ) : '.' ) . '</li>';
+				echo '<li>' . sprintf( __( 'Imported %d posts in this batch', 'keyring' ), $result['imported'] ) . ( $result['skipped'] ? sprintf( __( ' (skipped %d that looked like duplicates).', 'keyring' ), $result['skipped'] ) : '.' ) . '</li>';
 				flush();
 				$this->set_option( 'imported', ( $this->get_option( 'imported' ) + $result['imported'] ) );
 			}
