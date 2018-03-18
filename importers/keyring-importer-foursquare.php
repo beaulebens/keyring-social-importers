@@ -324,10 +324,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $foursquare_raw ) ) );
 
 				if ( ! empty( $photos ) ) {
-					$photos = array_reverse( $photos ); // Reverse so they stay in order when prepended
-					foreach ( $photos as $photo ) {
-						$this->sideload_media( $photo, $post_id, $post, apply_filters( 'keyring_foursquare_importer_image_embed_size', 'full' ) );
-					}
+					// Reverse so they stay in order when prepended, and sideload
+					$photos = array_reverse( $photos );
+					$this->sideload_media( $photos, $post_id, $post, apply_filters( 'keyring_foursquare_importer_image_embed_size', 'full' ), 'prepend' );
 				}
 
 				// If we found people, and have the People & Places plugin available
