@@ -173,17 +173,22 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				$post_content .= "\n\n<blockquote class='foursquare-note'>" . $post->shout . "</blockquote>";
 			}
 
-			// Include geo Data
+			// Include geo Data. Note if it was an "off the grid" check-in
 			$geo = array(
 				'lat'  => $post->venue->location->lat,
 				'long' => $post->venue->location->lng,
 			);
+			if ( ! empty( $post->private ) && 1 == $post->private ) {
+				$geo['public'] = 0;
+			} else {
+				$geo['public'] = 1;
+			}
 
 			// Pull out any media/photos
 			$photos = array();
 			if ( $post->photos->count > 0 ) {
 				foreach ( $post->photos->items as $photo ) {
-					$photos[] = $photo->prefix . "original" . $photo->suffix;
+					$photos[] = $photo->prefix . 'original' . $photo->suffix;
 				}
 			}
 
@@ -267,6 +272,11 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				// Looks like a duplicate
 				$skipped++;
 			} else {
+				// Set this as a private post, because it was "off the grid"
+				if ( 0 === $geo['public'] ) {
+					$post['post_status'] = 'private';
+				}
+
 				$post_id = wp_insert_post( $post );
 
 				if ( is_wp_error( $post_id ) ) {
@@ -296,9 +306,9 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 				// Store geodata if it's available
 				if ( ! empty( $geo ) ) {
-					add_post_meta( $post_id, 'geo_latitude', $geo['lat'] );
+					add_post_meta( $post_id, 'geo_latitude',  $geo['lat'] );
 					add_post_meta( $post_id, 'geo_longitude', $geo['long'] );
-					add_post_meta( $post_id, 'geo_public', 1 );
+					add_post_meta( $post_id, 'geo_public',    $geo['public'] );
 				}
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $foursquare_raw ) ) );
