@@ -123,6 +123,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 =  =
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
+* Enhancement: If a Swarm checkin is marked as "off the grid", then mark the geodata as non-public, and mark the created post as "private". Include a reprocessor to do the same to old posts.
 * Enhancement: Now handles Featured Image and all post meta on Jetpack imports.
 * Enhancement: Remove deprecated calls to `screen_icon()`
 * Enhancement: Reprocessor for expanding old short URLs for Twitter included. Props @chrishardie.
