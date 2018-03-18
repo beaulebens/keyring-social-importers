@@ -46,6 +46,16 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				);
 				return $reprocessors;
 			} );
+
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'foursquare-private' ] = array(
+					'label'       => __( 'Off-the-grid check-ins', 'keyring' ),
+					'description' => __( 'Marks off-the-grid/private check-ins as Private posts within WordPress, and marks their geo-data as being non-public to avoid them being mapped.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_private' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
 		}
 	}
 
@@ -462,6 +472,38 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 				),
 				$post->ID
 			);
+		}
+
+		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+	}
+
+	/**
+	 * Reprocess a $post and mark it as private if the original check-in was
+	 * off-the-grid
+	 */
+	function reprocess_private( $post ) {
+		// Get raw data
+		$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+		if ( ! $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+		}
+
+		// Decode it, and bail if that fails for some reason
+		$raw = json_decode( $raw );
+		if ( null == $raw ) {
+			return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+		}
+
+		// Off-the-grid check-ins are marked as `private`
+		if ( ! empty( $raw->private ) && 1 == $raw->private ) {
+			// Mark geodata as non-public
+			update_post_meta( $post->ID, 'geo_public', 0 );
+
+			// Modify post status
+			wp_update_post( array(
+				'ID'          => $post->ID,
+				'post_status' => 'private'
+			) );
 		}
 
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
