@@ -96,7 +96,8 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			'tags',
 			'machine_tags',
 			'media',
-			'url_o'
+			'url_o',
+			'rotation',
 		);
 		$url = "https://api.flickr.com/services/rest/?";
 		$params = array(
@@ -219,6 +220,13 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 				$geo = array();
 			}
 
+			// Preserve image orientation
+			if ( is_numeric( $post->rotation ) ) {
+				$rotation = $post->rotation;
+			} else {
+			    $rotation = 0;
+            }
+
 			// Keep a full copy of the raw data
 			$flickr_raw = $post;
 
@@ -236,6 +244,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 				'post_password',
 				'tags',
 				'geo',
+				'rotation',
 				'flickr_id',
 				'flickr_img',
 				'flickr_url',
@@ -298,7 +307,24 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $flickr_raw ) ) );
 
-				$this->sideload_media( $flickr_img, $post_id, $post, apply_filters( 'keyring_flickr_importer_image_embed_size', 'large' )  );
+				// If Flickr specified a rotation amount, download and modify the image before sideloading it
+				if ( isset( $rotation ) && ( 0 < $rotation ) && ( 360 > $rotation ) )  {
+
+					$temp_image_path = download_url( $flickr_img );
+					$flickr_img_wp = wp_get_image_editor( $temp_image_path );
+					if ( is_wp_error( $flickr_img_wp ) ) {
+						$error_string = $flickr_img_wp->get_error_message();
+						echo '<div id="message" class="error"><p>' . $error_string . '</p></div>';
+					} else {
+						$flickr_img_wp->rotate( $rotation );
+						$saved = $flickr_img_wp->save( $temp_image_path );
+						$this->sideload_media( $flickr_img, $post_id, $post, apply_filters( 'keyring_flickr_importer_image_embed_size', 'large' ), 'prepend', $saved['path'] );
+						unlink( $temp_image_path );
+					}
+
+				} else {
+					$this->sideload_media( $flickr_img, $post_id, $post, apply_filters( 'keyring_flickr_importer_image_embed_size', 'large' )  );
+				}
 
 				$imported++;
 

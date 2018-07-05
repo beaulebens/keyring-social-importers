@@ -838,7 +838,7 @@ abstract class Keyring_Importer_Base {
 	 * @param String what to do with the images. Always updated inline. Optionally append/prepend if not found in content
 	 *
 	 */
-	function sideload_media( $urls, $post_id, $post, $size = 'large', $where = 'prepend' ) {
+	function sideload_media( $urls, $post_id, $post, $size = 'large', $where = 'prepend', $local_files = null ) {
 		if ( ! function_exists( 'media_sideload_image' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		}
@@ -853,6 +853,10 @@ abstract class Keyring_Importer_Base {
 			$urls = array( $urls );
 		}
 
+		if ( ! is_array( $local_files ) ) {
+			$local_files = array( $local_files );
+		}
+
 		// Get the base uploads directory so that we can skip things in there
 		$dir = wp_get_upload_dir();
 		$dir = $dir['baseurl'];
@@ -865,7 +869,18 @@ abstract class Keyring_Importer_Base {
 			}
 
 			// Attempt to download/attach the media to this post
-			$id = media_sideload_image( $url, $post_id, $post['post_title'], 'id' );
+			if ( ! empty( $local_files[ $num ] ) ) {
+				// If a local file alternative was passed, use that for sideloading
+				$file_array = array(
+					'name' => basename( $url ),
+					'tmp_name' => $local_files[$num],
+				);
+
+				$id = media_handle_sideload( $file_array, $post_id, $post['post_title'] );
+			} else {
+				// Otherwise,sideload from the remote URL
+				$id = media_sideload_image( $url, $post_id, $post['post_title'], 'id' );
+			}
 			if ( ! is_wp_error( $id ) ) {
 				if ( 0 === $num ) {
 					// Set the first successfully processed image as Featured
