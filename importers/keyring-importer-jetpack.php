@@ -72,6 +72,9 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
 
 		if ( empty( $_POST['site'] ) || ! ctype_digit( $_POST['site'] )  ) {
 			$this->error( __( "You must select a site from which to import posts.", 'keyring' ) );
@@ -97,6 +100,7 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 		} else {
 			$this->set_option( array(
 				'site'        => (int) $_POST['site'],
+				'status'      => (string) $_POST['status'],
 				'category'    => (int) $_POST['category'],
 				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
@@ -214,7 +218,7 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author = $this->get_option( 'author' );
-			$post_status = 'publish';
+			$post_status = $this->get_option( 'status' );
 			$post_format = $post->format;
 			$jetpack_id  = $post->global_ID;
 			$jetpack_raw = $post;

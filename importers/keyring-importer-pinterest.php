@@ -15,6 +15,10 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 	// @todo: Allow selection of a single board to import from
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
+
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your pins into.", 'keyring' ) );
 		}
@@ -34,6 +38,7 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 			$this->step = 'options';
 		} else {
 			$this->set_option( array(
+				'status'      => (string) $_POST['status'],
 				'category'    => (int) $_POST['category'],
 				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
@@ -96,12 +101,12 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 			$tags = $this->get_option( 'tags' );
 
 			// Other bits
-			$post_author      = $this->get_option( 'author' );
-			$post_status      = 'publish';
-			$pinterest_id     = $post->id;
-			$pinterest_url    = $post->url;
-			$pinterest_img    = $post->image->original->url;
-			$pinterest_raw    = $post;
+			$post_author   = $this->get_option( 'author' );
+			$post_status   = $this->get_option( 'status' );
+			$pinterest_id  = $post->id;
+			$pinterest_url = $post->url;
+			$pinterest_img = $post->image->original->url;
+			$pinterest_raw = $post;
 
 			// Build the post array, and hang onto it along with the others
 			$this->posts[] = compact(

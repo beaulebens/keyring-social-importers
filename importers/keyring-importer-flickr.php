@@ -53,6 +53,10 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 
  	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
+
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into.", 'keyring' ) );
 		}
@@ -72,6 +76,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$this->step = 'greet';
 		} else {
 			$this->set_option( array(
+				'status'          => (string) $_POST['status'],
 				'category'        => (int) $_POST['category'],
 				'tags'            => explode( ',', $_POST['tags'] ),
 				'author'          => (int) $_POST['author'],
@@ -185,7 +190,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$flickr_img  = $post->url_o;
 			$flickr_url  = "http://www.flickr.com/photos/{$post->owner}/{$post->id}/"; // Use 'owner' (user-id) because it always works
 			$post_author = $this->get_option( 'author' );
-			$post_status = 'publish';
+			$post_status = $this->get_option( 'status' );
 
 			// Lay out the post content, similar to Instagram importer
 			$post_content = '<p class="flickr-image">';
