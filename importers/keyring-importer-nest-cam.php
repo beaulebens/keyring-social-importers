@@ -310,8 +310,15 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 				// because Nest has weird URLs, so they trip up all of WordPress' security
 				// protections against unknown mimetypes. They're just jpgs :(
 				$response = wp_safe_remote_get( $nest_img );
+				if ( 200 != wp_remote_retrieve_response_code( $response ) ) {
+					// LOL the internet is a terrible place, full of transient problems.
+					// If the download didn't work the first time, just try again after a pause.
+					sleep( 10 );
+					set_time_limit( 60 );
+					$response = wp_safe_remote_get( $nest_img );
+				}
 				$bits = wp_remote_retrieve_body( $response );
-				if ( $bits ) {
+				if ( ! empty( $bits ) ) {
 					unset( $response ); // we don't need 2 copies in memory
 					$upload = wp_upload_bits( 'nest-' . sanitize_title( $post_title ) . '.jpg', null, $bits );
 					if ( empty( $upload['error'] ) ) {
@@ -321,18 +328,27 @@ class Keyring_NestCam_Importer extends Keyring_Importer_Base {
 							$data = wp_generate_attachment_metadata( $attach, $upload['file'] );
 							wp_update_attachment_metadata( $attach, $data );
 							set_post_thumbnail( $post_id, $attach );
+						} else {
+							Keyring_Util::debug( 'NEST: wp_insert_attachment failed' );
+							Keyring_Util::debug( print_r( $attach, true ) );
 						}
 
 						// Update the post with the new, local URL to the image
 						$post_data = get_post( $post_id );
 						$post_data->post_content = str_replace( '###', $upload['url'], $post_data->post_content );
 						wp_update_post( $post_data );
+					} else {
+						Keyring_Util::debug( 'NEST: wp_upload_bits failed' );
+						Keyring_Util::debug( print_r( $upload, true ) );
 					}
+
+					$imported++;
+
+					do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
+				} else {
+					Keyring_Util::debug( 'NEST: no bits in response' );
+					Keyring_Util::debug( print_r( $response, true ) );
 				}
-
-				$imported++;
-
-				do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 			}
 		}
 		$this->posts = array();
