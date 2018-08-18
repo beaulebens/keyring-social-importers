@@ -172,7 +172,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Include geo Data
 			$geo = false;
-			if ( ! empty( $post->location ) ) {
+			if ( ! empty( $post->location ) && ! empty( $post->location->latitude ) ) {
 				$geo = array(
 					'lat'  => $post->location->latitude,
 					'long' => $post->location->longitude,
