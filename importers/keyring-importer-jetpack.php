@@ -218,7 +218,7 @@ class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author = $this->get_option( 'author' );
-			$post_status = $this->get_option( 'status' );
+			$post_status = $this->get_option( 'status', 'publish' );
 			$post_format = $post->format;
 			$jetpack_id  = $post->global_ID;
 			$jetpack_raw = $post;

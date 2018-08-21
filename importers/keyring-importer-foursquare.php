@@ -245,7 +245,7 @@ class Keyring_Foursquare_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author    = $this->get_option( 'author' );
-			$post_status    = $this->get_option( 'status' );
+			$post_status    = $this->get_option( 'status', 'publish' );
 			$foursquare_id  = $post->id;
 			$foursquare_raw = $post;
 

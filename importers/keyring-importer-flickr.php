@@ -190,7 +190,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$flickr_img  = $post->url_o;
 			$flickr_url  = "http://www.flickr.com/photos/{$post->owner}/{$post->id}/"; // Use 'owner' (user-id) because it always works
 			$post_author = $this->get_option( 'author' );
-			$post_status = $this->get_option( 'status' );
+			$post_status = $this->get_option( 'status', 'publish' );
 
 			// Lay out the post content, similar to Instagram importer
 			$post_content = '<p class="flickr-image">';

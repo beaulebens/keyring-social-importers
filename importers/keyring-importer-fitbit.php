@@ -129,7 +129,7 @@ class Keyring_Fitbit_Importer extends Keyring_Importer_Base {
 
 		// Other bits
 		$post_author = $this->get_option( 'author' );
-		$post_status = $this->get_option( 'status' );
+		$post_status = $this->get_option( 'status', 'publish' );
 		$fitbit_raw  = $importdata; // Keep all of the things
 
 		// Build the post array, and hang onto it along with the others

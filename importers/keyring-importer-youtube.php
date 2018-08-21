@@ -100,7 +100,7 @@ class Keyring_YouTube_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author = $this->get_option( 'author' );
-			$post_status = $this->get_option( 'status' );
+			$post_status = $this->get_option( 'status', 'publish' );
 			$youtube_id  = $post->id->videoId;
 			$youtube_url = 'https://www.youtube.com/watch?v=' . $post->id->videoId; // Is this the canonical?
 			$youtube_raw = $post;

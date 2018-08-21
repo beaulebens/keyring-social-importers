@@ -126,7 +126,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author    = $this->get_option( 'author' );
-			$post_status    = $this->get_option( 'status' );
+			$post_status    = $this->get_option( 'status', 'publish' );
 			$instapaper_id  = $post->bookmark_id;
 			$instapaper_raw = $post;
 

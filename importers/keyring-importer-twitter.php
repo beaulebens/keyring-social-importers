@@ -317,7 +317,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			$in_reply_to_screen_name = $post->in_reply_to_screen_name;
 			$in_reply_to_status_id   = $post->in_reply_to_status_id;
 			$post_author             = $this->get_option( 'author' );
-			$post_status             = $this->get_option( 'status' );
+			$post_status             = $this->get_option( 'status', 'publish' );
 			$twitter_raw             = $post;
 
 			// Build the post array, and hang onto it along with the others

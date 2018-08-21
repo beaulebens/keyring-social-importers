@@ -120,7 +120,7 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );
-			$post_status   = $this->get_option( 'status' );
+			$post_status   = $this->get_option( 'status', 'publish' );
 			$delicious_id  = (string) $post['hash'];
 			$delicious_raw = $post;
 

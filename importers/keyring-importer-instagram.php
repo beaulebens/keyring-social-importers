@@ -224,7 +224,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );
-			$post_status      = $this->get_option( 'status' );
+			$post_status      = $this->get_option( 'status', 'publish' );
 			$instagram_id     = $post->id;
 			$instagram_url    = $post->link;
 			$instagram_img    = $post->images->standard_resolution->url;

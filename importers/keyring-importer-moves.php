@@ -196,7 +196,7 @@ class Keyring_Moves_Importer extends Keyring_Importer_Base {
 
 		// Other bits
 		$post_author = $this->get_option( 'author' );
-		$post_status = $this->get_option( 'status' );
+		$post_status = $this->get_option( 'status', 'publish' );
 		$moves_raw   = $importdata; // Keep all of the things
 
 		// Build the post array, and hang onto it along with the others

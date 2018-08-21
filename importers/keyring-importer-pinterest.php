@@ -102,7 +102,7 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author   = $this->get_option( 'author' );
-			$post_status   = $this->get_option( 'status' );
+			$post_status   = $this->get_option( 'status', 'publish' );
 			$pinterest_id  = $post->id;
 			$pinterest_url = $post->url;
 			$pinterest_img = $post->image->original->url;
