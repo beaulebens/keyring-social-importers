@@ -78,6 +78,10 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 		}
 
 		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
+
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your checkins into.", 'keyring' ) );
 		}
@@ -109,6 +113,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			$this->step = 'greet';
 		} else {
 			$this->set_option( array(
+				'status'          => (string) $_POST['status'],
 				'category'        => (int) $_POST['category'],
 				'tags'            => explode( ',', $_POST['tags'] ),
 				'author'          => (int) $_POST['author'],
@@ -312,7 +317,7 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			$in_reply_to_screen_name = $post->in_reply_to_screen_name;
 			$in_reply_to_status_id   = $post->in_reply_to_status_id;
 			$post_author             = $this->get_option( 'author' );
-			$post_status             = 'publish';
+			$post_status             = $this->get_option( 'status', 'publish' );
 			$twitter_raw             = $post;
 
 			// Build the post array, and hang onto it along with the others

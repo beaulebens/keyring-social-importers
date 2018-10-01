@@ -122,12 +122,14 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 == Changelog ==
 
 =  =
+* Enhancement: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
 * Enhancement: If a Swarm checkin is marked as "off the grid", then mark the geodata as non-public, and mark the created post as "private". Include a reprocessor to do the same to old posts.
 * Enhancement: Now handles Featured Image and all post meta on Jetpack imports.
 * Enhancement: Remove deprecated calls to `screen_icon()`
 * Enhancement: Reprocessor for expanding old short URLs for Twitter included. Props @chrishardie.
 * Enhancement: Added a filter `keyring_importer_posts_pre_insert` which allows you to filter all post content before posts are imported/created.
+* Enhancement: Nest importer will now automatically attempt to re-download an image if the first attempt fails (significantly improves reliability).
 * Change: `sideload_media`'s last argument has changed to allow more flexibility.
 * Bugfix: `sideload_media` previously didn't handle multiple URLs properly. Now it should.
 * Bugfix: Shortened URLs are expanded correctly for Twitter now. Props @chrishardie.

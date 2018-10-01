@@ -495,6 +495,27 @@ abstract class Keyring_Importer_Base {
 				</tr>
 				<tr valign="top">
 					<th scope="row">
+						<label for="category"><?php _e( 'Create posts with status', 'keyring' ) ?></label>
+					</th>
+					<td>
+						<select name="status" id="status">
+						<?php
+							$statuses = array(
+								'publish' => __( 'Publish' ),
+								'pending' => __( 'Pending' ),
+								'draft'   => __( 'Draft' ),
+								'private' => __( 'Private' ),
+							);
+							foreach ( $statuses as $status => $label ) {
+								printf( '<option value="%s"' . selected( $this->get_option( 'status', 'publish' ) == $status ) . '>%s</option>', $status, $label );
+							}
+						?>
+						</select>
+						<p class="description"><?php _e( 'When posts are created, they will be set to this status. Publish will publish them publicly, immediately.', 'keyring' ); ?></p>
+					</td>
+				</tr>
+				<tr valign="top">
+					<th scope="row">
 						<label for="category"><?php _e( 'Import posts into Category', 'keyring' ) ?></label>
 					</th>
 					<td>

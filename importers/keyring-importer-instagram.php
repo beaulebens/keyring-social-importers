@@ -52,6 +52,10 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
+
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( "Make sure you select a valid category to import your pictures into.", 'keyring' ) );
 		}
@@ -71,6 +75,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			$this->step = 'options';
 		} else {
 			$this->set_option( array(
+				'status'      => (string) $_POST['status'],
 				'category'    => (int) $_POST['category'],
 				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
@@ -172,7 +177,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Include geo Data
 			$geo = false;
-			if ( ! empty( $post->location ) ) {
+			if ( ! empty( $post->location ) && ! empty( $post->location->latitude ) ) {
 				$geo = array(
 					'lat'  => $post->location->latitude,
 					'long' => $post->location->longitude,
@@ -219,7 +224,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Other bits
 			$post_author      = $this->get_option( 'author' );
-			$post_status      = 'publish';
+			$post_status      = $this->get_option( 'status', 'publish' );
 			$instagram_id     = $post->id;
 			$instagram_url    = $post->link;
 			$instagram_img    = $post->images->standard_resolution->url;
