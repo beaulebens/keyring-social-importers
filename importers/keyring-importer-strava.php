@@ -9,7 +9,7 @@ NB: phpcs wants this to be "keyring_strava_importer()", but I'm just following B
 function Keyring_Strava_Importer() {
 
 	/**
-	This is a class to import data from the Strava.com API
+	This is a class to import data from https://www.strava.com/api/v3
 
 	@author        Mark Drovdahl
 	@Category      class
@@ -19,7 +19,7 @@ function Keyring_Strava_Importer() {
 		const LABEL             = 'Strava';    // e.g. 'Twitter'.
 		const KEYRING_SERVICE   = 'Keyring_Service_Strava';    // Full class name of the Keyring_Service this importer requires.
 		const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
-		const NUM_PER_LOAD      = 30; // How many activities per API request? We'll use Strava's default.
+		const NUM_PER_LOAD      = 30; // How many activities per API request? We'll use Strava's default of 30.
 
 		/**
 		Borrowed from other keyring-social-importers
@@ -57,20 +57,16 @@ function Keyring_Strava_Importer() {
 
 		/**
 		Create the request which will be sent to the Strava API
-		TODO: this probably needs to be paged?
+		- This MVP uses the "athlete/activities" endpoint which returns activity summaries https://developers.strava.com/docs/reference/#api-models-SummaryActivity
+		- The "athlete/activities" endpoint can be filtered for activities that have taken place "before" or "after" a given time. These can be combined to target specific date ranges. Queries to the endpoint with ?after=[epoch_date] return activities in ascending order (oldest first) and can be paged with ?page= and segmented by ?per_page=
+		- Our Strava keyring token has a "first_date" which indicates when the Strava Athlete profile was created. We can assume there are no activies to import which are older than that date.
+			first date example: "first_date: 2014-06-07T19:13:55Z" is UTC
+		TODO: use the Keyring reprocessor w/the strava "id" from the first API call to then call "/activities/{id}" endpoint which returns moar! activity details https://developers.strava.com/docs/reference/#api-models-DetailedActivity
 		**/
 		function build_request_url() {
-			// This Strava endpoint returns a list of activities for the authenticated user in descending order (most recent first)
-			// This Strava endpoint can be filtered for activities that have taken place "before" or "after" a certain time. These can be combined.
-			// We use the API date filter to request activities more recent than the latest activty we have stored.
-			// This endpoint can also be paged, but for now we're WRONGLY ASSUMING no paging required.
-			// Our Strava keyring token has a "first_date" which (maybe) corresponds to the earliest activity for this Strava account
-			// first date example: "first_date: 2014-06-07T19:13:55Z" is UTC
-			// First import should query using "before" now and walk backwards towards the "first_date".
-			// Auto import should query using "before" now and walk backwards towards the date of the most recently imported activity.
 			$url = 'https://www.strava.com/api/v3/athlete/activities';
 
-			// Get the latest imported activities.
+			// Get the latest imported activity.
 			$latest = get_posts(
 				array(
 					'numberposts' => 1,
@@ -87,29 +83,29 @@ function Keyring_Strava_Importer() {
 				)
 			);
 
-			// If we already have activities imported, only query Strava for activities more recent than the most recently imported activity.
+			// If we already have activities imported, only query Strava for activities more recent than the latest imported activity.
 			if ( $latest ) {
-				// Convert the post_date.
+				// Convert the WP post_date. Strava needs it in epoch/unix time.
 				$last = date( 'Ymd H:i:s', strtotime( $latest[0]->post_date_gmt ) );
+
+				// Build our API request url with ?after=[epoch_date] param.
 				$url  = add_query_arg( 'after', strtotime( $last ), $url );
-				error_log( 'we have prior imports, latest activity date is: ' . $last . "\n" . 'titled: ' . $latest[0]->post_title );
 			} else {
-				// If we have no activities imported, we will assume this is our first import and we query for activites after the "first_date".
-				// Queries to Strava for ?after=[epoch_date] return activities in ascending order and can be paged.
-				$date = $this->service->token->get_meta( 'first_date' ); // We should have the profile creation date for the Strava Athlete.
-				error_log( 'first date: ' . $date );
+				// If we have no activities imported, we assume this is our first import and we query for activites after the "first_date".
+				$date = $this->service->token->get_meta( 'first_date' );
+
+				// Build our API request url with ?after=[epoch_date] and ?page= and ?per_page= params.
+				$url  = add_query_arg( 'after', strtotime( $date ), $url );
 				$url = add_query_arg( 'page', $this->get_option( 'page', 1 ), $url );
 				$url = add_query_arg( 'per_page', self::NUM_PER_LOAD, $url );
-				$url  = add_query_arg( 'after', strtotime( $date ), $url );
 			}
-			error_log( "querying strava: " . $url );
 			return $url;
 		}
 
 		/**
-		Helper function to convert between meters and kilometers
+		Helper function to format meters to kilometers. Could go with format_duration() in a Convert_Units() class.
 		Anything less than 1 kilometer is formatted in meters, otherwise kilometers
-		todo: extend with a switch statement and a second parameter of "units" to eg: convert meters to miles
+		TODO: extend with a switch statement and a second parameter of "units" to eg: convert meters to miles
 
 		@param number $num is a distance value in meters
 		**/
@@ -124,7 +120,7 @@ function Keyring_Strava_Importer() {
 			}
 
 		/**
-		Helper function to convert between seconds, minutes and hours
+		Helper function to format seconds to minutes and hours
 		Anything less than 1 hour is shown in minutes, otherwise hours + minutes
 
 		@param number $num is a time value in seconds
@@ -142,56 +138,38 @@ function Keyring_Strava_Importer() {
 		}
 
 		/**
-		This function converts Strava activities to WordPress post objects
+		This function converts Strava activity objects to WordPress post objects
 
-		@param json $importdata is the json coming from the Strava API.
-		returns an array of posts:
-		$this->posts[] = compact(
-			'post_author',
-			'post_date',
-			'post_content',
-			'post_title',
-			'post_status',
-			'post_category',
-			'tags',
-			'strava_raw'
-		);
+		@param json object $importdata The json returned from the Strava api.
+		@return Array of posts:
 		**/
 		function extract_posts_from_data( $importdata ) {
-			//error_log( $importdata );
-			// TODO: need to catch cases where $importdata == []
-
-			// If we get back an empty array, it may be b/c we're querying for a date beyond which there are no activities to import.
-			// or we have no data to process.
+			// Early return if we get back an empty array, it may be b/c we're querying for a date beyond which there are no activities to import.
+			// TODO: the "Failed to download..." message is not being output, so when there are no more activites to return, the user gets a confusing message.
 			if ( null === $importdata || empty( $importdata ) ) {
 				$this->finished = true;
-				error_log( 'nothing to import');
 				return new Keyring_Error( 'keyring-strava-importer-failed-download', __( 'Failed to download activities from Strava. Please wait a few minutes and try again.', 'keyring' ) );
 			}
 
-			// If we have the wrong type of data.
+			// Early return if we have the wrong type of data.
 			if ( ! is_array( $importdata ) || ! is_object( $importdata[0] ) ) {
 				$this->finished = true;
-				error_log( 'nothing to import');
 				return new Keyring_Error( 'keyring-strava-importer-failed-download', __( 'Failed to download your activities from Strava. Please wait a few minutes and try again.', 'keyring' ) );
 			}
 
-			// Iterate over the activities
+			// Iterate over the activities.
 			foreach ( $importdata as $post ) {
-				// Set WP "post_date" to the Strava activity "start_date" which is UTC, eg: "2018-02-06T17:36:50Z"
-				// TODO: get more discrete and add time to post_date
-				// Set WP post category and post tags from the import options.
-				// Set WP post title to the Strava activity "name".
-				error_log( $post->start_date );
-				$post_date = substr( $post->start_date, 0, 4 ) . '-' . substr( $post->start_date, 5, 2 ) . '-' . substr( $post->start_date, 8, 2 ) . ' ' . substr( $post->start_date, 11, 8 );
-				error_log( $post_date );
+				// Map Strava data model to WP post model. post->start_date is in UTC.
+				// Set WP post_title to the Strava activity "name".
+				$post_date 	   = substr( $post->start_date, 0, 4 ) . '-' . substr( $post->start_date, 5, 2 ) . '-' . substr( $post->start_date, 8, 2 ) . ' ' . substr( $post->start_date, 11, 8 );
 				$post_category = array( $this->get_option( 'category' ) );
 				$tags          = $this->get_option( 'tags' );
-				$post_title = $post->name;
+				$post_title    = $post->name;
 
-				// Set WP post content to a summary of the Strava activity
-				// Strava activities have a "type". Initially we'll only import types: "Hike", "Run" and "Ride" and use Strava's distance and "moving time" fields
-				// Check if the activity has a distance value
+				// Set WP post content to a summary of the Strava activity.
+				// Strava activities have a "type". Initially we only support importing activity types: "Hike", "Run" and "Ride" and use Strava's distance and "moving time" fields.
+				// Check if the activity has a distance value.
+				// TODO: support other activity types.
 				// TODO: add heartrate, but conditionally on "has_heartrate":true in the API response.
 				if ( ! empty( $post->distance ) ) {
 					switch ( $post->type ) {
@@ -256,16 +234,14 @@ function Keyring_Strava_Importer() {
 
 			foreach ( $this->posts as $post ) {
 				extract( $post );
-				error_log ( $post_title . ', ' . $post_content . ', ' . $post_date );
-				// Avoid inserting duplicate activities
+				// Avoid inserting duplicate activities.
 				if (
-					// TODO: get more defensive here, in case one of these doesn't exist
-					$post_id = post_exists( $post_date )
+					$post_id = post_exists( $post_title, $post_content, $post_date )
 				) {
-					// Looks like a duplicate
-					error_log( "skipping" );
+					// Looks like a duplicate.
 					$skipped++;
 				} else {
+					// Insert the post into the DB.
 					$post_id = wp_insert_post( $post, $wp_error = TRUE );
 
 					if ( is_wp_error( $post_id ) ) {
@@ -279,19 +255,22 @@ function Keyring_Strava_Importer() {
 					// Track which Keyring service was used.
 					wp_set_object_terms( $post_id, self::LABEL, 'keyring_services' );
 
+					// Set the post format.
 					set_post_format( $post_id, 'status' );
 
 					// Update Category.
 					wp_set_post_categories( $post_id, $post_category );
 
+					// Update tags.
 					if ( count( $tags ) ) {
 						wp_set_post_terms( $post_id, implode( ',', $tags ) );
 					}
 
+					// Save the raw JSON in post-meta.
 					add_post_meta( $post_id, 'raw_import_data', wp_slash( wp_json_encode( $strava_raw ) ) );
-					error_log( 'importing' );
 					$imported++;
 
+					// A potentially useful action to hoook into for further processing.
 					do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 				}
 			}
@@ -299,16 +278,16 @@ function Keyring_Strava_Importer() {
 
 			// Return, so that the handler can output info (or update DB, or whatever).
 			return array( 'imported' => $imported, 'skipped' => $skipped );
-		}
+		} // end insert_posts function
 	} // end class Keyring_Strava_Importer
 } // end function Keyring_Strava_Importer
 
 add_action( 'init', function() {
-	Keyring_Strava_Importer(); // Instantiate the class
+	Keyring_Strava_Importer();
 	keyring_register_importer(
 		'strava',
 		'Keyring_Strava_Importer',
 		plugin_basename( __FILE__ ),
-		__( '<strong>[Under Development!]</strong> Import your daily activities as single Posts, marked with the "status" format. You can also use the data as part of other maps or whatever else you\'d like to do with it.', 'keyring' )
+		__( '<strong>[Under Development!]</strong> Import your Strava activities, each as a single Post, marked with the "status" format. The Post title is set to the Activity name and a basic summary of the activity including the distance and the duration goes in the Post body.', 'keyring' )
 	);
 } );
