@@ -89,13 +89,13 @@ function Keyring_Strava_Importer() {
 				$last = date( 'Ymd H:i:s', strtotime( $latest[0]->post_date_gmt ) );
 
 				// Build our API request url with ?after=[epoch_date] param.
-				$url  = add_query_arg( 'after', strtotime( $last ), $url );
+				$url = add_query_arg( 'after', strtotime( $last ), $url );
 			} else {
 				// If we have no activities imported, we assume this is our first import and we query for activites after the "first_date".
 				$date = $this->service->token->get_meta( 'first_date' );
 
 				// Build our API request url with ?after=[epoch_date] and ?page= and ?per_page= params.
-				$url  = add_query_arg( 'after', strtotime( $date ), $url );
+				$url = add_query_arg( 'after', strtotime( $date ), $url );
 				$url = add_query_arg( 'page', $this->get_option( 'page', 1 ), $url );
 				$url = add_query_arg( 'per_page', self::NUM_PER_LOAD, $url );
 			}
@@ -144,6 +144,12 @@ function Keyring_Strava_Importer() {
 		@return Array of posts:
 		**/
 		function extract_posts_from_data( $importdata ) {
+			// Looks like we ran out of results.
+			if ( is_array( $importdata ) && empty( $importdata ) ) {
+				$this->finished = true;
+				return;
+			}
+
 			// Early return if we get back an empty array, it may be b/c we're querying for a date beyond which there are no activities to import.
 			// TODO: the "Failed to download..." message is not being output, so when there are no more activites to return, the user gets a confusing message.
 			if ( null === $importdata || empty( $importdata ) ) {
@@ -152,7 +158,7 @@ function Keyring_Strava_Importer() {
 			}
 
 			// Early return if we have the wrong type of data.
-			if ( ! is_array( $importdata ) || ! is_object( $importdata[0] ) ) {
+			if ( ! is_object( $importdata[0] ) ) {
 				$this->finished = true;
 				return new Keyring_Error( 'keyring-strava-importer-failed-download', __( 'Failed to download your activities from Strava. Please wait a few minutes and try again.', 'keyring' ) );
 			}
@@ -161,7 +167,7 @@ function Keyring_Strava_Importer() {
 			foreach ( $importdata as $post ) {
 				// Map Strava data model to WP post model. post->start_date is in UTC.
 				// Set WP post_title to the Strava activity "name".
-				$post_date 	   = substr( $post->start_date, 0, 4 ) . '-' . substr( $post->start_date, 5, 2 ) . '-' . substr( $post->start_date, 8, 2 ) . ' ' . substr( $post->start_date, 11, 8 );
+				$post_date     = substr( $post->start_date, 0, 4 ) . '-' . substr( $post->start_date, 5, 2 ) . '-' . substr( $post->start_date, 8, 2 ) . ' ' . substr( $post->start_date, 11, 8 );
 				$post_category = array( $this->get_option( 'category' ) );
 				$tags          = $this->get_option( 'tags' );
 				$post_title    = $post->name;
@@ -176,7 +182,7 @@ function Keyring_Strava_Importer() {
 						case 'Hike':
 							$post_content = sprintf(
 								// Translators: Hiked [distance] in [duration].
-								__( 'Hiked %1$s in %2$s' ),
+								__( 'Hiked %1$s in %2$s.' ),
 								$this->format_distance( $post->distance ),
 								$this->format_duration( $post->moving_time )
 							);
@@ -185,7 +191,7 @@ function Keyring_Strava_Importer() {
 						case 'Run':
 							$post_content = sprintf(
 								// Translators: Ran [distance] in [duration].
-								__( 'Ran %1$s in %2$s' ),
+								__( 'Ran %1$s in %2$s.' ),
 								$this->format_distance( $post->distance ),
 								$this->format_duration( $post->moving_time )
 							);
@@ -194,20 +200,55 @@ function Keyring_Strava_Importer() {
 						case 'Ride':
 							$post_content = sprintf(
 								// Translators: Cycled [distance] in [duration].
-								__( 'Cycled %1$s in %2$s' ),
+								__( 'Cycled %1$s in %2$s.' ),
 								$this->format_distance( $post->distance ),
 								$this->format_duration( $post->moving_time )
 							);
+							break;
+
+						case 'Workout':
+						default:
+							if ( $post->has_heartrate ) {
+								$post_content = sprintf(
+									// Translators: Worked out for [duration] with a max heartrate of [heartrate]
+									__( 'Worked out for %1$s with a max heartrate of %2$d.' ),
+									$this->format_duration( $post->moving_time ),
+									$post->max_heartrate
+								);
+							} else {
+								$post_content = sprintf(
+									// Translators: Worked out for [duration].
+									__( 'Worked out for %1$s.' ),
+									$this->format_duration( $post->moving_time )
+								);
+							}
 							break;
 					}
 				}
 
 				// Set post author from the import options.
 				$post_author = $this->get_option( 'author' );
-				// Set post status from import options, default to published.
+
+				// Set post status from import options, default to published unless set to private on Strava.
+				// @todo Currently this won't work because you need a token with scope=activity:read_all to get private activities. Will need to modify or filter the Strava Service file for that.
+				$private = $post->private;
 				$post_status = $this->get_option( 'status', 'publish' );
+				if ( $private ) {
+					$post_status = 'private'; // Force private posts
+				}
+
+				$strava_id        = $post->id;
+				$strava_permalink = 'https://www.strava.com/activities/' . $post->id;
+
+				// Grab an encoded/compressed polyline of the GPS data if available.
+				$geo = '';
+				if ( ! empty( $post->map ) && ! empty( $post->map->summary_polyline ) ) {
+					$geo = $post->map->summary_polyline;
+				}
+
 				// Keep the raw JSON activity from Strava.
 				$strava_raw  = $post;
+
 				// Build an array of post objects.
 				$this->posts[] = compact(
 					'post_author',
@@ -217,7 +258,11 @@ function Keyring_Strava_Importer() {
 					'post_status',
 					'post_category',
 					'tags',
-					'strava_raw'
+					'strava_raw',
+					'strava_permalink',
+					'strava_id',
+					'geo',
+					'private'
 				);
 			}
 		}
@@ -264,6 +309,15 @@ function Keyring_Strava_Importer() {
 					// Update tags.
 					if ( count( $tags ) ) {
 						wp_set_post_terms( $post_id, implode( ',', $tags ) );
+					}
+
+					add_post_meta( $post_id, 'strava_id', $strava_id );
+					add_post_meta( $post_id, 'strava_permalink', $strava_permalink );
+
+					// Store the encoded polyline; will require decoding to map it
+					if ( $geo ) {
+						add_post_meta( $post_id, 'geo_polyline_encoded', $geo );
+						add_post_meta( $post_id, 'geo_public', ( $private ? '0' : '1') ); // Hide geo if it's a private activity
 					}
 
 					// Save the raw JSON in post-meta.
