@@ -26,6 +26,7 @@ Importers included currently:
 * [Moves](https://moves-app.com/)
 * [Nest Cameras](https://nest.com/camera/meet-nest-cam/)
 * [Pinterest](https://pinterest.com/)
+* [Strava](https://strava.com/)
 * [TripIt](https://tripit.com/)
 * [Twitter](https://twitter.com/)
 
@@ -105,6 +106,12 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Imports every individual pin as a post (can be a LOT), with a Post Format of "image".
 * Stores the image for each pin in your Media Library.
 
+= Strava =
+* Activities are imported as new Posts.
+* GPS data is stored as an encoded polyline if available.
+* Stores raw and summary data for further processing.
+* Currently does NOT download any media or support People & Places.
+
 = TripIt =
 * Trips are imported, with flights mapped and posted as Status-format posts.
 * Geo data is stored using something resembling the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata).
@@ -122,7 +129,8 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 == Changelog ==
 
 =  =
-* Enhancement: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
+* NEW: Added a Strava importer. Kudos @mdrovdahl.
+* NEW: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
 * Enhancement: If a Swarm checkin is marked as "off the grid", then mark the geodata as non-public, and mark the created post as "private". Include a reprocessor to do the same to old posts.
 * Enhancement: Now handles Featured Image and all post meta on Jetpack imports.
@@ -136,7 +144,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Bugfix: Updated Instagram to use max/min_id rather than timestamps for looping through media.
 
 = 1.8 =
-* Enhancement: Added a Jetpack/WordPress.com importer.
+* NEW: Added a Jetpack/WordPress.com importer.
 * Enhancement: Fix Twitter importer so that it correctly obeys the option to import retweets. Props @glueckpress for reporting.
 * Enhancement: Lots of code cleanup/linting.
 
@@ -149,11 +157,11 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 = 1.6 =
 * NOTE: Update to Keyring 1.7 for full compatibility.
-* Enhancement: Nest Camera importer.
-* Enhancement: Pinterest importer.
+* NEW: Added "Reprocessor" concept (accessible via Tools > Import > Reprocess Keyring Data) to allow developers to re-use the raw import data for posts, and update/reprocess information.
+* NEW: Nest Camera importer.
+* NEW: Pinterest importer.
 * Enhancement: Instapaper now downloads the full content of articles and stores it within the content of posts, so that you can search them later. It applies a `noindex` tag to those post pages to avoid duplicate content issues. Note that this is retroactive, so it'll go back and find all your old links and try to download their content over time. If you don't want that to happen, you'll need to set a postmeta/Custom Field against all of them called `remote_content` (set it to '1'), or you can filter `keyring_instapaper_download_article_texts` and `__return_false` to always turn it off; add_filter( 'keyring_instapaper_download_article_texts', '__return_false' );
 * Enhancement: Compatible with [People & Places](https://github.com/beaulebens/people-places) (must be installed manually currently) to associate people and places across all services under a single taxonomy.
-* Enhancement: Added "Reprocessor" concept (accessible via Tools > Import > Reprocess Keyring Data) to allow developers to re-use the raw import data for posts, and update/reprocess information.
 * Enhancement: Bundle Reprocessors to fix an old encoding bug, plus to process Twitter, Instagram and Foursquare imports for People & Places.
 * Enhancement: Default the UI to save imported content against the current user/author.
 * Enhancement: Link back to the importer on the success screen.
