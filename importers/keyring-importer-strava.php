@@ -91,11 +91,8 @@ function Keyring_Strava_Importer() {
 				// Build our API request url with ?after=[epoch_date] param.
 				$url = add_query_arg( 'after', strtotime( $last ), $url );
 			} else {
-				// If we have no activities imported, we assume this is our first import and we query for activites after the "first_date".
-				$date = $this->service->token->get_meta( 'first_date' );
-
 				// Build our API request url with ?after=[epoch_date] and ?page= and ?per_page= params.
-				$url = add_query_arg( 'after', strtotime( $date ), $url );
+				$url = add_query_arg( 'after', 0, $url );
 				$url = add_query_arg( 'page', $this->get_option( 'page', 1 ), $url );
 				$url = add_query_arg( 'per_page', self::NUM_PER_LOAD, $url );
 			}
