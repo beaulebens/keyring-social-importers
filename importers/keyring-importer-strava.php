@@ -20,6 +20,53 @@ function Keyring_Strava_Importer() {
 		const KEYRING_SERVICE   = 'Keyring_Service_Strava';    // Full class name of the Keyring_Service this importer requires.
 		const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 		const NUM_PER_LOAD      = 30; // How many activities per API request? We'll use Strava's default of 30.
+		
+		function __construct() {
+			parent::__construct();
+			
+			// Fixp roblem with polyline escaping
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'strava-geo-polyline' ] = array(
+					'label'       => __( 'Correct geo polyline in post meta of Strava activities', 'keyring' ),
+					'description' => __( 'Polyline was not properly escaped before saving into the postmeta. Some slash characters might be missing and thus corrupting the data.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_polylines' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+		
+		/**
+		 * Reprocess a $post and fix polylines. We have one correctly stored in the raw field
+		 * so let's just extract it into its own meta field and save with a correct escaping.
+		 */
+		function reprocess_polylines( $post ) {
+			// Get raw data
+			$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+			if ( ! $raw ) {
+				return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+			}
+
+			// Decode it, and bail if that fails for some reason
+			$raw = json_decode( $raw );
+			if ( null === $raw ) {
+				return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+			}
+
+			// Grab an encoded/compressed polyline of the GPS data if available.
+			$geo = '';
+			if ( ! empty( $raw->map ) && ! empty( $raw->map->summary_polyline ) ) {
+				$geo = $raw->map->summary_polyline;
+			}
+			
+			if ( empty( $geo ) ) {
+				return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+			}
+			
+			add_post_meta( $post->ID, 'geo_polyline_encoded', wp_slash( wp_json_encode( $geo ) ) );
+
+			return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+		}
 
 		/**
 		Borrowed from other keyring-social-importers
