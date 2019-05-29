@@ -337,7 +337,7 @@ function Keyring_Strava_Importer() {
 
 					// Store the encoded polyline; will require decoding to map it
 					if ( $geo ) {
-						add_post_meta( $post_id, 'geo_polyline_encoded', $geo );
+						add_post_meta( $post_id, 'geo_polyline_encoded', wp_slash( wp_json_encode( $geo ) ) );
 						add_post_meta( $post_id, 'geo_public', ( $private ? '0' : '1') ); // Hide geo if it's a private activity
 					}
 
