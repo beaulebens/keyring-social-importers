@@ -257,6 +257,7 @@ function Keyring_Strava_Importer() {
 
 				$strava_id        = $post->id;
 				$strava_permalink = 'https://www.strava.com/activities/' . $post->id;
+				$strava_type = $post->type;
 
 				// Grab an encoded/compressed polyline of the GPS data if available.
 				$geo = '';
@@ -278,6 +279,7 @@ function Keyring_Strava_Importer() {
 					'tags',
 					'strava_raw',
 					'strava_permalink',
+					'strava_type',
 					'strava_id',
 					'geo',
 					'private'
@@ -331,6 +333,7 @@ function Keyring_Strava_Importer() {
 
 					add_post_meta( $post_id, 'strava_id', $strava_id );
 					add_post_meta( $post_id, 'strava_permalink', $strava_permalink );
+					add_post_meta( $post_id, 'strava_type', $strava_type );
 
 					// Store the encoded polyline; will require decoding to map it
 					if ( $geo ) {
