@@ -179,6 +179,24 @@ function Keyring_Strava_Importer() {
 				// TODO: add heartrate, but conditionally on "has_heartrate":true in the API response.
 				if ( ! empty( $post->distance ) ) {
 					switch ( $post->type ) {
+						case 'Swim':
+							$post_content = sprintf(
+								// Translators: Swam [distance] in [duration].
+								__( 'Swam %1$s in %2$s.' ),
+								$this->format_distance( $post->distance ),
+								$this->format_duration( $post->moving_time )
+							);
+							break;
+
+						case 'Walk':
+							$post_content = sprintf(
+								// Translators: Walked [distance] in [duration].
+								__( 'Walked %1$s in %2$s.' ),
+								$this->format_distance( $post->distance ),
+								$this->format_duration( $post->moving_time )
+							);
+							break;
+
 						case 'Hike':
 							$post_content = sprintf(
 								// Translators: Hiked [distance] in [duration].
