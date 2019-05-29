@@ -59,8 +59,6 @@ function Keyring_Strava_Importer() {
 		Create the request which will be sent to the Strava API
 		- This MVP uses the "athlete/activities" endpoint which returns activity summaries https://developers.strava.com/docs/reference/#api-models-SummaryActivity
 		- The "athlete/activities" endpoint can be filtered for activities that have taken place "before" or "after" a given time. These can be combined to target specific date ranges. Queries to the endpoint with ?after=[epoch_date] return activities in ascending order (oldest first) and can be paged with ?page= and segmented by ?per_page=
-		- Our Strava keyring token has a "first_date" which indicates when the Strava Athlete profile was created. We can assume there are no activies to import which are older than that date.
-			first date example: "first_date: 2014-06-07T19:13:55Z" is UTC
 		TODO: use the Keyring reprocessor w/the strava "id" from the first API call to then call "/activities/{id}" endpoint which returns moar! activity details https://developers.strava.com/docs/reference/#api-models-DetailedActivity
 		**/
 		function build_request_url() {
