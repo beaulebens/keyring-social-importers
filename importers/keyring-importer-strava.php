@@ -345,7 +345,7 @@ function Keyring_Strava_Importer() {
 					add_post_meta( $post_id, 'raw_import_data', wp_slash( wp_json_encode( $strava_raw ) ) );
 					$imported++;
 
-					// A potentially useful action to hoook into for further processing.
+					// A potentially useful action to hook into for further processing.
 					do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 				}
 			}
