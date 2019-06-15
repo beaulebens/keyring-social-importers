@@ -129,7 +129,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 == Changelog ==
 
 =  =
-* NEW: Added a Strava importer. Kudos @mdrovdahl.
+* NEW: Added a Strava importer. Kudos @mdrovdahl. Props @marekhrabe for additional contributions.
 * NEW: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
 * Enhancement: If a Swarm checkin is marked as "off the grid", then mark the geodata as non-public, and mark the created post as "private". Include a reprocessor to do the same to old posts.

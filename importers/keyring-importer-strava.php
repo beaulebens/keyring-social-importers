@@ -59,8 +59,6 @@ function Keyring_Strava_Importer() {
 		Create the request which will be sent to the Strava API
 		- This MVP uses the "athlete/activities" endpoint which returns activity summaries https://developers.strava.com/docs/reference/#api-models-SummaryActivity
 		- The "athlete/activities" endpoint can be filtered for activities that have taken place "before" or "after" a given time. These can be combined to target specific date ranges. Queries to the endpoint with ?after=[epoch_date] return activities in ascending order (oldest first) and can be paged with ?page= and segmented by ?per_page=
-		- Our Strava keyring token has a "first_date" which indicates when the Strava Athlete profile was created. We can assume there are no activies to import which are older than that date.
-			first date example: "first_date: 2014-06-07T19:13:55Z" is UTC
 		TODO: use the Keyring reprocessor w/the strava "id" from the first API call to then call "/activities/{id}" endpoint which returns moar! activity details https://developers.strava.com/docs/reference/#api-models-DetailedActivity
 		**/
 		function build_request_url() {
@@ -85,17 +83,10 @@ function Keyring_Strava_Importer() {
 
 			// If we already have activities imported, only query Strava for activities more recent than the latest imported activity.
 			if ( $latest ) {
-				// Convert the WP post_date. Strava needs it in epoch/unix time.
-				$last = date( 'Ymd H:i:s', strtotime( $latest[0]->post_date_gmt ) );
-
-				// Build our API request url with ?after=[epoch_date] param.
-				$url = add_query_arg( 'after', strtotime( $last ), $url );
+				// Build our API request url with ?after=[epoch_time] param.
+				$url = add_query_arg( 'after', strtotime( $latest[0]->post_date_gmt ), $url );
 			} else {
-				// If we have no activities imported, we assume this is our first import and we query for activites after the "first_date".
-				$date = $this->service->token->get_meta( 'first_date' );
-
-				// Build our API request url with ?after=[epoch_date] and ?page= and ?per_page= params.
-				$url = add_query_arg( 'after', strtotime( $date ), $url );
+				$url = add_query_arg( 'after', '0', $url );
 				$url = add_query_arg( 'page', $this->get_option( 'page', 1 ), $url );
 				$url = add_query_arg( 'per_page', self::NUM_PER_LOAD, $url );
 			}
