@@ -108,7 +108,8 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 = Strava =
 * Activities are imported as new Posts.
-* GPS data is stored as an encoded polyline if available.
+* Activity type is stored as post meta for easier querying.
+* GPS data is stored as an encoded polyline if available. [https://github.com/emcconville/google-map-polyline-encoding-tool](Google Maps Polyline Encoding Tool) has been tested to work well with the data.
 * Stores raw and summary data for further processing.
 * Currently does NOT download any media or support People & Places.
 

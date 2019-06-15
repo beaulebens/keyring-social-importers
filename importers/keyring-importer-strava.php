@@ -20,6 +20,53 @@ function Keyring_Strava_Importer() {
 		const KEYRING_SERVICE   = 'Keyring_Service_Strava';    // Full class name of the Keyring_Service this importer requires.
 		const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 		const NUM_PER_LOAD      = 30; // How many activities per API request? We'll use Strava's default of 30.
+		
+		function __construct() {
+			parent::__construct();
+			
+			// Fixp roblem with polyline escaping
+			add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
+				$reprocessors[ 'strava-geo-polyline' ] = array(
+					'label'       => __( 'Correct geo polyline in post meta of Strava activities', 'keyring' ),
+					'description' => __( 'Polyline was not properly escaped before saving into the postmeta. Some slash characters might be missing and thus corrupting the data.', 'keyring' ),
+					'callback'    => array( $this, 'reprocess_polylines' ),
+					'service'     => $this->taxonomy->slug,
+				);
+				return $reprocessors;
+			} );
+		}
+		
+		/**
+		 * Reprocess a $post and fix polylines. We have one correctly stored in the raw field
+		 * so let's just extract it into its own meta field and save with a correct escaping.
+		 */
+		function reprocess_polylines( $post ) {
+			// Get raw data
+			$raw = get_post_meta( $post->ID, 'raw_import_data', true );
+			if ( ! $raw ) {
+				return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+			}
+
+			// Decode it, and bail if that fails for some reason
+			$raw = json_decode( $raw );
+			if ( null === $raw ) {
+				return Keyring_Importer_Reprocessor::PROCESS_FAILED;
+			}
+
+			// Grab an encoded/compressed polyline of the GPS data if available.
+			$geo = '';
+			if ( ! empty( $raw->map ) && ! empty( $raw->map->summary_polyline ) ) {
+				$geo = $raw->map->summary_polyline;
+			}
+			
+			if ( empty( $geo ) ) {
+				return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
+			}
+			
+			add_post_meta( $post->ID, 'geo_polyline_encoded', wp_slash( wp_json_encode( $geo ) ) );
+
+			return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
+		}
 
 		/**
 		Borrowed from other keyring-social-importers
@@ -170,6 +217,24 @@ function Keyring_Strava_Importer() {
 				// TODO: add heartrate, but conditionally on "has_heartrate":true in the API response.
 				if ( ! empty( $post->distance ) ) {
 					switch ( $post->type ) {
+						case 'Swim':
+							$post_content = sprintf(
+								// Translators: Swam [distance] in [duration].
+								__( 'Swam %1$s in %2$s.' ),
+								$this->format_distance( $post->distance ),
+								$this->format_duration( $post->moving_time )
+							);
+							break;
+
+						case 'Walk':
+							$post_content = sprintf(
+								// Translators: Walked [distance] in [duration].
+								__( 'Walked %1$s in %2$s.' ),
+								$this->format_distance( $post->distance ),
+								$this->format_duration( $post->moving_time )
+							);
+							break;
+
 						case 'Hike':
 							$post_content = sprintf(
 								// Translators: Hiked [distance] in [duration].
@@ -230,6 +295,7 @@ function Keyring_Strava_Importer() {
 
 				$strava_id        = $post->id;
 				$strava_permalink = 'https://www.strava.com/activities/' . $post->id;
+				$strava_type = $post->type;
 
 				// Grab an encoded/compressed polyline of the GPS data if available.
 				$geo = '';
@@ -251,6 +317,7 @@ function Keyring_Strava_Importer() {
 					'tags',
 					'strava_raw',
 					'strava_permalink',
+					'strava_type',
 					'strava_id',
 					'geo',
 					'private'
@@ -304,10 +371,11 @@ function Keyring_Strava_Importer() {
 
 					add_post_meta( $post_id, 'strava_id', $strava_id );
 					add_post_meta( $post_id, 'strava_permalink', $strava_permalink );
+					add_post_meta( $post_id, 'strava_type', $strava_type );
 
 					// Store the encoded polyline; will require decoding to map it
 					if ( $geo ) {
-						add_post_meta( $post_id, 'geo_polyline_encoded', $geo );
+						add_post_meta( $post_id, 'geo_polyline_encoded', wp_slash( wp_json_encode( $geo ) ) );
 						add_post_meta( $post_id, 'geo_public', ( $private ? '0' : '1') ); // Hide geo if it's a private activity
 					}
 
@@ -315,7 +383,7 @@ function Keyring_Strava_Importer() {
 					add_post_meta( $post_id, 'raw_import_data', wp_slash( wp_json_encode( $strava_raw ) ) );
 					$imported++;
 
-					// A potentially useful action to hoook into for further processing.
+					// A potentially useful action to hook into for further processing.
 					do_action( 'keyring_post_imported', $post_id, static::SLUG, $post );
 				}
 			}
