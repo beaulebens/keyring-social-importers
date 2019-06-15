@@ -1,8 +1,8 @@
 === Keyring Social Importers ===
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
 Requires at least: 4.0
-Tested up to: 4.7.3
-Stable Tag: 1.8
+Tested up to: 5.2.1
+Stable Tag: 1.9
 
 Import your posts/images/etc from Twitter, Instagram, Pinterest, and more into your WordPress install. Own your content.
 
@@ -129,7 +129,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 == Changelog ==
 
-=  =
+= 1.9 =
 * NEW: Added a Strava importer. Kudos @mdrovdahl. Props @marekhrabe for additional contributions.
 * NEW: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
