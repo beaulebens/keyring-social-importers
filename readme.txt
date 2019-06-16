@@ -3,7 +3,7 @@ Contributors: beaulebens, cfinke, chrishardie, marekhrabe, mdrovdahl, roccotripa
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
 Requires at least: 4.0
 Tested up to: 5.2.1
-Stable Tag: 1.9
+Stable Tag: 2.0
 
 Import your posts/images/etc from Twitter, Instagram, Strava, and more, into your WordPress install. Own your content.
 
@@ -137,6 +137,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 =  =
  * NEW: Add a Pocket importer, props @roccotripaldi.
+ * Change: Updated readme.txt to include contributors.
 
 = 1.9 =
 * NEW: Added a Strava importer. Kudos @mdrovdahl. Props @marekhrabe for additional contributions.
