@@ -135,7 +135,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 == Changelog ==
 
-=  =
+= 2.0 =
  * NEW: Add a Pocket importer, props @roccotripaldi.
  * Change: Updated readme.txt to include contributors.
 
