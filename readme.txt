@@ -1,14 +1,15 @@
 === Keyring Social Importers ===
+Contributors: beaulebens, cfinke, chrishardie, marekhrabe, mdrovdahl, roccotripaldi
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
 Requires at least: 4.0
 Tested up to: 5.2.1
 Stable Tag: 1.9
 
-Import your posts/images/etc from Twitter, Instagram, Pinterest, and more into your WordPress install. Own your content.
+Import your posts/images/etc from Twitter, Instagram, Strava, and more, into your WordPress install. Own your content.
 
 == Description ==
 
-**Please [read about each importer](http://wordpress.org/extend/plugins/keyring-social-importers/other_notes/) before running this plugin**
+**Please [read about each importer](http://wordpress.org/extend/plugins/keyring-social-importers/other_notes/) before running this plugin.**
 
 This package of social importers provide you with the ability to pull in your content that gets created on other sites, and re-publish it on your own WordPress site. Rather than leaving others in control of everything you've put time and effort into, why not host it yourself on your one true, home-on-the-web, WordPress? [Read more about this technique/approach to data ownership](http://dentedreality.com.au/2012/10/07/where-is-your-digital-hub-home/).
 
@@ -26,6 +27,7 @@ Importers included currently:
 * [Moves](https://moves-app.com/)
 * [Nest Cameras](https://nest.com/camera/meet-nest-cam/)
 * [Pinterest](https://pinterest.com/)
+* [Pocket](https://getpocket.com/)
 * [Strava](https://strava.com/)
 * [TripIt](https://tripit.com/)
 * [Twitter](https://twitter.com/)
@@ -106,6 +108,10 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Imports every individual pin as a post (can be a LOT), with a Post Format of "image".
 * Stores the image for each pin in your Media Library.
 
+= Pocket =
+* Imports links and creates a post for each of them, with the Link post format.
+* Uses as many details (e.g. title) as possible from Pocket.
+
 = Strava =
 * Activities are imported as new Posts.
 * Activity type is stored as post meta for easier querying.
@@ -128,6 +134,9 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs).
 
 == Changelog ==
+
+=  =
+ * NEW: Add a Pocket importer, props @roccotripaldi.
 
 = 1.9 =
 * NEW: Added a Strava importer. Kudos @mdrovdahl. Props @marekhrabe for additional contributions.
