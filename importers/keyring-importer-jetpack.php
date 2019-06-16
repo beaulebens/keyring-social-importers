@@ -5,7 +5,6 @@
 // where we know that the class we're extending is available. *hangs head in shame*
 function Keyring_Jetpack_Importer() {
 
-
 class Keyring_Jetpack_Importer extends Keyring_Importer_Base {
 	const SLUG              = 'jetpack'; // e.g. 'twitter' (should match a service in Keyring)
 	const LABEL             = 'Jetpack'; // e.g. 'Twitter'
