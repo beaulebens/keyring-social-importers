@@ -51,7 +51,7 @@ class Keyring_Pocket_Importer extends Keyring_Importer_Base {
 			'access_token' => $this->service->get_token()->token,
 			'count'        => self::NUM_PER_REQUEST,
 			'sort'         => 'oldest',
-			'state'        => 'archive',
+			'state'        => 'all',
 			'detailType'   => 'complete'
 		);
 		return add_query_arg( $args, 'https://getpocket.com/v3/get' );
