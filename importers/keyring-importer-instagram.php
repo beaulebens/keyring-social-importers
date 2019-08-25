@@ -192,18 +192,17 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 			// Any people mentioned in this post
 			// Relies on the People & Places plugin to store (later)
+			// Tagged directly in the image. All we get is a username and coordinates for the tag
 			$people = array();
 			if ( ! empty( $post->users_in_photo ) ) {
 				foreach ( $post->users_in_photo as $user ) {
 					$people[ $user->user->username ] = array(
-						'name'    => $user->user->full_name,
-						'picture' => $user->user->profile_picture,
-						'id'      => $user->user->id
+						'name' => $user->user->username
 					);
 				}
 			}
 
-			// User mentions in captions
+			// Username mentions in captions
 			if ( ! empty( $post->caption->text ) && stristr( $post->caption->text, '@' ) ) {
 				preg_match_all( '/(^|[(\[\s\.])?@(\w+)/', $post->caption->text, $matches );
 				foreach ( (array) $matches[2] as $match ) {
@@ -380,8 +379,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 					static::SLUG,
 					$user->user->username,
 					array(
-						'name' => trim( $user->user->full_name ),
-						'id'   => $user->user->id
+						'name' => trim( $user->user->username )
 					),
 					$post->ID
 				);
