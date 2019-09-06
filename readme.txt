@@ -77,8 +77,10 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 = Instagram =
 * Each photo on your [Instagram](https://instagram.com/) account is downloaded and imported into your Media Library.
 * For every photo, a Post is created and published, containing that one image (and it is attached within WordPress).
+* You can label a Post as private by using the tag #keyringprivate in the original photo
 * Posts are marked with the 'image' Post Format.
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url.
+
 
 = Instapaper =
 * Imports your *Archived* links and creates a post for each of them (with post format of Link).

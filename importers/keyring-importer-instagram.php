@@ -222,8 +222,12 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			}
 
 			// Other bits
+			$status = $this->get_option( 'status', 'publish' );
+			if ( ! empty( $tags ) && is_array( $tags ) && array_search( 'keyringprivate', $tags ) !== false ) {
+				$status = 'private';
+			}
 			$post_author      = $this->get_option( 'author' );
-			$post_status      = $this->get_option( 'status', 'publish' );
+			$post_status      = $status;
 			$instagram_id     = $post->id;
 			$instagram_url    = $post->link;
 			$instagram_img    = $post->images->standard_resolution->url;
