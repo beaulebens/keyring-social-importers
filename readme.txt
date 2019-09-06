@@ -81,7 +81,6 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Posts are marked with the 'image' Post Format.
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url.
 
-
 = Instapaper =
 * Imports your *Archived* links and creates a post for each of them (with post format of Link).
 * Uses the title from the document in Instapaper, if there is a description associated then it uses that as well.
