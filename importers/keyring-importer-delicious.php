@@ -119,8 +119,11 @@ class Keyring_Delicious_Importer extends Keyring_Importer_Base {
 			}
 
 			// Other bits
-			$post_author   = $this->get_option( 'author' );
 			$post_status   = $this->get_option( 'status', 'publish' );
+			if ( ! empty( $tags ) && is_array( $tags ) && array_search( 'keyringprivate', $tags ) !== false ) {
+				$post_status = 'private';
+			}
+			$post_author   = $this->get_option( 'author' );
 			$delicious_id  = (string) $post['hash'];
 			$delicious_raw = $post;
 

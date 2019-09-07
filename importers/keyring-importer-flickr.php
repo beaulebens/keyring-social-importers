@@ -190,7 +190,7 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$flickr_img  = $post->url_o;
 			$flickr_url  = "http://www.flickr.com/photos/{$post->owner}/{$post->id}/"; // Use 'owner' (user-id) because it always works
 			$post_author = $this->get_option( 'author' );
-			$post_status = $this->get_option( 'status', 'publish' );
+
 
 			// Lay out the post content, similar to Instagram importer
 			$post_content = '<p class="flickr-image">';
@@ -205,7 +205,11 @@ class Keyring_Flickr_Importer extends Keyring_Importer_Base {
 			$tags         = array_merge( $this->get_option( 'tags' ), explode( ' ', $post->tags ) );
 			$machine_tags = explode( ' ', $post->machine_tags );
 			$tags         = array_filter( array_merge( $tags, $machine_tags ) );
-
+			$post_status = $this->get_option( 'status', 'publish' );
+			if ( ! empty( $tags ) && is_array( $tags ) && array_search( 'keyringprivate', $tags ) !== false ) {
+				$post_status = 'private';
+			}
+			
 			// Password protect some photos
 			if ( 1 == $post->ispublic ) {
 				$post_password = '';

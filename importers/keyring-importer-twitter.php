@@ -317,8 +317,11 @@ class Keyring_Twitter_Importer extends Keyring_Importer_Base {
 			$in_reply_to_screen_name = $post->in_reply_to_screen_name;
 			$in_reply_to_status_id   = $post->in_reply_to_status_id;
 			$post_author             = $this->get_option( 'author' );
-			$post_status             = $this->get_option( 'status', 'publish' );
 			$twitter_raw             = $post;
+			$post_status             = $this->get_option( 'status', 'publish' );
+			if ( ! empty( $tags ) && is_array( $tags ) && array_search( 'keyringprivate', $tags ) !== false ) {
+				$post_status = 'private';
+			}
 
 			// Build the post array, and hang onto it along with the others
 			$this->posts[] = compact(

@@ -48,6 +48,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * All posts created by the importers are associated with a taxonomy called `keyring_service`, which allows you to filter/select them. Appears in wp-admin as "Imported From" under the Posts menu.
 * Every attempt is made to download/store as much data as possible, and use it intelligently (e.g. tags).
 * Raw import data is stored in a custom field (`raw_import_data`) as a json_encode()ed string.
+* On services that support tags, label a Post as private by using the tag #keyringprivate on the original
 
 = Delicious =
 * Every bookmark from your [Delicious](https://delicious.com/) account is imported as a post.
@@ -77,7 +78,6 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 = Instagram =
 * Each photo on your [Instagram](https://instagram.com/) account is downloaded and imported into your Media Library.
 * For every photo, a Post is created and published, containing that one image (and it is attached within WordPress).
-* You can label a Post as private by using the tag #keyringprivate in the original photo
 * Posts are marked with the 'image' Post Format.
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url.
 
@@ -135,6 +135,9 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs).
 
 == Changelog ==
+
+=  = 
+* Allow use of the #keyringprivate tag on most services to set the created post to Private. Props @johnHackworth for the idea and initial implementation.
 
 = 2.0 =
  * NEW: Add a Pocket importer, props @roccotripaldi.

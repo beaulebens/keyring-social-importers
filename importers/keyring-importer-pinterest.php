@@ -101,8 +101,11 @@ class Keyring_Pinterest_Importer extends Keyring_Importer_Base {
 			$tags = $this->get_option( 'tags' );
 
 			// Other bits
+			$post_status = $this->get_option( 'status', 'publish' );
+			if ( ! empty( $tags ) && is_array( $tags ) && array_search( 'keyringprivate', $tags ) !== false ) {
+				$post_status = 'private';
+			}
 			$post_author   = $this->get_option( 'author' );
-			$post_status   = $this->get_option( 'status', 'publish' );
 			$pinterest_id  = $post->id;
 			$pinterest_url = $post->url;
 			$pinterest_img = $post->image->original->url;
