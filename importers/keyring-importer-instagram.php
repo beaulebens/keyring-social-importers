@@ -154,25 +154,61 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			// Apply selected category
 			$post_category = array( $this->get_option( 'category' ) );
 
-			// Construct a post body.
-			$instagram_video = false;
+			// Construct a post body
+			// Instagram posts can be a few different things;
+			// - Single Image
+			// - Single Video
+			// - Carousel of Media (any combination of Images and Videos)
+			$instagram_img   = array();
+			$instagram_video = array();
 			if ( ! empty( $post->videos->standard_resolution->url ) ) {
-				// We've got a video to handle
-				$instagram_video = $post->videos->standard_resolution->url;
+				// Single Video
+				$instagram_video[] = $post->videos->standard_resolution->url;
 
 				$post_content = '<p class="instagram-video">';
 				$post_content .= "\n\n" . esc_url( $post->videos->standard_resolution->url ) . "\n\n";
 				$post_content .= '</p>';
+			} else if ( ! empty( $post->carousel_media ) ) {
+				// Carousel of Media (can be any combination of images and videos)
+				// Everything will be embedded inline for now
+				// We'll eventually sideload everything to store it locally
+				// TODO: Actually embed as a [gallery]
+				$post_content = '<div class="instagram-carousel">';
+				$post_content .= "\n\n";
+				foreach ( $post->carousel_media as $media ) {
+					if ( 'image' == $media->type ) {
+						$instagram_img[] = $media->images->standard_resolution->url;
+
+						$post_content .= '<p class="instagram-image">';
+						$post_content .= '<a href="' . esc_url( $post->link ) . '" class="instagram-link">';
+						$post_content .= '<img src="' . esc_url( $media->images->standard_resolution->url ) . '" width="' . esc_attr( $media->images->standard_resolution->width ) . '" height="' . esc_attr( $media->images->standard_resolution->height ) . '" alt="' . esc_attr( $post_title ) . '" class="instagram-img" />';
+						$post_content .= '</a>';
+						$post_content .= '</p>';
+						$post_content .= "\n\n";
+					} else if ( 'video' == $media->type ) {
+						$instagram_video[] = $media->videos->standard_resolution->url;
+
+						$post_content .= '<p class="instagram-video">';
+						$post_content .= "\n\n" . esc_url( $media->videos->standard_resolution->url ) . "\n\n";
+						$post_content .= '</p>';
+						$post_content .= "\n\n";
+					}
+				}
+				$post_content .= '</div>';
 			} else {
-				// Just an image. By default we'll just link to the external image.
+				// Single Image
+				$instagram_img[] = $post->images->standard_resolution->url;
+
+				// By default we'll just link to the external image.
 				// In insert_posts() we'll attempt to download/replace that with a local version.
 				$post_content = '<p class="instagram-image">';
 				$post_content .= '<a href="' . esc_url( $post->link ) . '" class="instagram-link">';
 				$post_content .= '<img src="' . esc_url( $post->images->standard_resolution->url ) . '" width="' . esc_attr( $post->images->standard_resolution->width ) . '" height="' . esc_attr( $post->images->standard_resolution->height ) . '" alt="' . esc_attr( $post_title ) . '" class="instagram-img" />';
-				$post_content .= '</a></p>';
+				$post_content .= '</a>';
+				$post_content .= '</p>';
 			}
 			if ( ! empty( $post->caption ) ) {
-				$post_content .= "\n<p class='instagram-caption'>" . $post->caption->text . '</p>';
+				$post_content .= "\n\n<p class='instagram-caption'>" . $post->caption->text . '</p>';
 			}
 
 			// Include geo Data
@@ -229,7 +265,6 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 			$post_author      = $this->get_option( 'author' );
 			$instagram_id     = $post->id;
 			$instagram_url    = $post->link;
-			$instagram_img    = $post->images->standard_resolution->url;
 			$instagram_filter = $post->filter;
 			$instagram_raw    = $post;
 
@@ -246,8 +281,8 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				'tags',
 				'instagram_id',
 				'instagram_url',
-				'instagram_img',
-				'instagram_video',
+				'instagram_img', // Always an array
+				'instagram_video', // Always an array
 				'instagram_filter',
 				'instagram_raw',
 				'people',
@@ -300,11 +335,7 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 				add_post_meta( $post_id, 'instagram_id', $instagram_id );
 				add_post_meta( $post_id, 'instagram_url', $instagram_url );
 				add_post_meta( $post_id, 'instagram_filter', $instagram_filter );
-
-				if ( $instagram_video ) {
-					add_post_meta( $post_id, 'instagram_video', $instagram_video );
-				}
-
+				
 				if ( count( $tags ) ) {
 					wp_set_post_terms( $post_id, implode( ',', $tags ) );
 				}
@@ -318,11 +349,13 @@ class Keyring_Instagram_Importer extends Keyring_Importer_Base {
 
 				add_post_meta( $post_id, 'raw_import_data', wp_slash( json_encode( $instagram_raw ) ) );
 
-				if ( $instagram_video ) {
-					// Sideload thumbnail image just for "completeness"
-					media_sideload_image( $instagram_img, $post_id );
+				if ( ! empty( $instagram_video ) ) {
+					// Sideload thumbnail images just for "completeness"
+					foreach ( $instagram_img as $img ) {
+						media_sideload_image( $img, $post_id );
+					}
 
-					// Sideload the video itself
+					// Sideload the videos
 					$this->sideload_video( $instagram_video, $post_id );
 				} else {
 					// Sideload and embed image
