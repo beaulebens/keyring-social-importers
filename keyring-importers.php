@@ -923,7 +923,7 @@ abstract class Keyring_Importer_Base {
 	 * Similar to sideload_media, but a little simpler. This will download a video
 	 * from a URL, and then embed it into a post by replacing the same URL
 	 */
-	function sideload_video( $url, $post_id ) {
+	function sideload_video( $urls, $post_id ) {
 		if ( ! function_exists( 'media_sideload_image' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		}
@@ -934,22 +934,28 @@ abstract class Keyring_Importer_Base {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
-		$file = array();
-		$file['tmp_name'] = download_url( $url );
-		$file['name']     = basename( explode( '?', $url )[0] ); // Strip any querystring to avoid confusing mimetypes
+		if ( ! is_array( $urls ) ) {
+			$urls = array( $urls );
+		}
 
-		if ( is_wp_error( $file['tmp_name'] ) ) {
-			// Download failed, leave the post alone
-			@unlink( $file_array['tmp_name'] );
-		} else {
-			// Download worked, now import into Media Library
-			$id = media_handle_sideload( $file, $post_id );
-			@unlink( $file_array['tmp_name'] );
-			if ( ! is_wp_error( $id ) ) {
-				// Update URL in post to point to the local copy
-				$post_data = get_post( $post_id );
-				$post_data->post_content = str_replace( esc_url( $url ), wp_get_attachment_url( $id ), $post_data->post_content );
-				wp_update_post( $post_data );
+		foreach( $urls as $url ) {
+			$file = array();
+			$file['tmp_name'] = download_url( $url );
+			$file['name']     = basename( explode( '?', $url )[0] ); // Strip any querystring to avoid confusing mimetypes
+
+			if ( is_wp_error( $file['tmp_name'] ) ) {
+				// Download failed, leave the post alone
+				@unlink( $file_array['tmp_name'] );
+			} else {
+				// Download worked, now import into Media Library and attach to the specified post
+				$id = media_handle_sideload( $file, $post_id );
+				@unlink( $file_array['tmp_name'] );
+				if ( ! is_wp_error( $id ) ) {
+					// Update URL in post to point to the local copy
+					$post_data = get_post( $post_id );
+					$post_data->post_content = str_replace( esc_url( $url ), wp_get_attachment_url( $id ), $post_data->post_content );
+					wp_update_post( $post_data );
+				}
 			}
 		}
 	}
