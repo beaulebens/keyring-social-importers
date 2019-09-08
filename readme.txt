@@ -138,6 +138,8 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 
 =  = 
 * NEW: Allow use of the #keyringprivate tag on most services to set the created post to Private. Props @johnHackworth for the idea and initial implementation.
+* NEW: Download media from carousels (multiple images or videos) from Instagram. Currently just embedded as a series of media items in the created post.
+* Enhancement: Improved the microcopy for airport codes if using People & Places.
 * Bugfix: Sideloading videos wasn't working if they had querystrings (e.g. all Instagram videos). Now we strip them to get the extension properly, and make sure that the URLs are embedded in posts properly.
 
 = 2.0 =

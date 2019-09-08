@@ -469,7 +469,7 @@ add_action( 'init', function() {
 			'key'   => 'tripit',
 			'label' => __( 'Airport code', 'keyring' ),
 			'type'  => 'text',
-			'help'  => __( "3-character airport code (IATA).", 'keyring' ),
+			'help'  => __( "3-character airport code (IATA) if this location is an airport.", 'keyring' ),
 			'table' => false,
 		) );
 	}
