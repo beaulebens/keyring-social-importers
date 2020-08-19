@@ -597,7 +597,7 @@ abstract class Keyring_Importer_Base {
 		<script type="text/javascript" charset="utf-8">
 			jQuery( document ).ready( function() {
 				jQuery( '#auto_import' ).on( 'change', function() {
-					if ( jQuery( this ).attr( 'checked' ) ) {
+					if ( jQuery( this ).prop( 'checked' ) ) {
 						jQuery( '#options-submit' ).val( '<?php echo esc_js( $auto_import_button_label ); ?>' );
 					} else {
 						jQuery( '#options-submit' ).val( '<?php echo esc_js( __( 'Import all posts (once-off)', 'keyring' ) ); ?>' );
