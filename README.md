@@ -1,13 +1,18 @@
-=== Keyring Social Importers ===
+# Keyring Social Importers
+
 Contributors: beaulebens, cfinke, chrishardie, marekhrabe, mdrovdahl, roccotripaldi
+
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
+
 Requires at least: 4.0
+
 Tested up to: 5.2.1
+
 Stable Tag: 2.0
 
 Import your posts/images/etc from Twitter, Instagram, Strava, and more, into your WordPress install. Own your content.
 
-== Description ==
+## Description 
 
 **Please [read about each importer](http://wordpress.org/extend/plugins/keyring-social-importers/other_notes/) before running this plugin.**
 
@@ -34,33 +39,33 @@ Importers included currently:
 
 You can potentially [write your own importers](https://github.com/cfinke/Keyring-Facebook-Importer) as well, using the base class included.
 
-== Installation ==
+## Installation 
 
 0. Install and activate the [Keyring plugin](http://wordpress.org/extend/plugins/keyring/), which is required for authentication.
 1. Install Keyring Social Importers either via the WordPress.org plugin directory, or by uploading the files to your server.
 2. Activate both plugins via Plugins > Installed Plugins.
 3. Go to Tools > Import > (service) and follow the prompts.
 
-== Importers ==
+## Importers 
 
-= Common Features =
+### Common Features 
 * If you select to 'auto-import new content', all importers will check once per hour for new content.
 * All posts created by the importers are associated with a taxonomy called `keyring_service`, which allows you to filter/select them. Appears in wp-admin as "Imported From" under the Posts menu.
 * Every attempt is made to download/store as much data as possible, and use it intelligently (e.g. tags).
 * Raw import data is stored in a custom field (`raw_import_data`) as a json_encode()ed string.
 * On services that support tags, label a Post as private by using the tag #keyringprivate on the original
 
-= Delicious =
+### Delicious 
 * Every bookmark from your [Delicious](https://delicious.com/) account is imported as a post.
 * All imported posts are marked with the 'link' Post Format.
 * delicious_id and the href/link itself are saved as custom fields.
 * Tags used on Delicious are used in WordPress.
 
-= Fitbit =
+### Fitbit 
 * Very basic for now, just imports your data and creates a simple summary post.
 * Summary post only contains a statement about how many steps you took that day.
 
-= Flickr =
+### Flickr 
 * Every photo in your [Flickr](https://flickr.com/) account is downloaded (the actual, original image) and imported into your Media Library.
 * For every photo, a Post is created and published, containing that one image (and it is attached within WordPress).
 * Posts are marked with the 'image' Post Format.
@@ -70,33 +75,33 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * If available, geo data is downloaded and stored per the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata).
 * flickr_id and the full URL to the photo page are stored as custom fields.
 
-= Foursquare =
+### Foursquare 
 * Imports each check-in on [Foursquare](https://foursquare.com/) as a separate Post.
 * Marks those Posts with the 'status' Post Format.
 * foursquare_id plus geo lat/long are stored as separate custom fields, per the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata).
 
-= Instagram =
+### Instagram 
 * Each photo on your [Instagram](https://instagram.com/) account is downloaded and imported into your Media Library.
 * For every photo, a Post is created and published, containing that one image (and it is attached within WordPress).
 * Posts are marked with the 'image' Post Format.
 * The name of the filter used is stored as instagram_filter, the URL to the photo page is stored as instagram_url.
 
-= Instapaper =
+### Instapaper 
 * Imports your *Archived* links and creates a post for each of them (with post format of Link).
 * Uses the title from the document in Instapaper, if there is a description associated then it uses that as well.
 * NEW: Downloads the full content of the article using Instapaper's API, and stores that *in the post content*, so that you can search it later. Disable it by creating a stub plugin, or dropping this in your theme's functions.php; add_filter( 'keyring_instapaper_download_article_texts', '__return_false' );
 
-= Jetpack/WordPress.com =
+### Jetpack/WordPress.com 
 * Import posts from either self-hosted, or hosted copies of WordPress, via the Jetpack/WordPress.com API.
 * Post author is always overridden.
 * Tags, content, title, excerpt are all carried over.
 
-= Moves =
+### Moves 
 * Imports your data daily.
 * Creates a summary post, which is a bulleted list detailing each category of activity for the day.
 * Stores raw and summary data for further processing.
 
-= Nest (Camera) =
+### Nest (Camera) 
 * Allows you to pick hours of the day to take snapshots from your cameras.
 * You can pick anything between no snapshots, or one every hour, per camera.
 * Each snapshot will be downloaded directly into your Media Library.
@@ -104,29 +109,29 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * If you click the "Check For New Content Now" button, when configured for auto-import, then all cameras with at least one scheduled snapshot will take one right now, regardless of what time they're scheduled (good for verifying that things work, or taking a specific snapshot for whatever reason).
 * Does not require a Nest Aware subscription, since the relatively infrequent snapshots are under request limits.
 
-= Pinterest =
+### Pinterest 
 * NEW: This is a new addition, and is pretty rough still. Not recommended for production sites.
 * Imports every individual pin as a post (can be a LOT), with a Post Format of "image".
 * Stores the image for each pin in your Media Library.
 
-= Pocket =
+### Pocket
 * Imports links and creates a post for each of them, with the Link post format.
 * Uses as many details (e.g. title) as possible from Pocket.
 
-= Strava =
+## Strava 
 * Activities are imported as new Posts.
 * Activity type is stored as post meta for easier querying.
 * GPS data is stored as an encoded polyline if available. [https://github.com/emcconville/google-map-polyline-encoding-tool](Google Maps Polyline Encoding Tool) has been tested to work well with the data.
 * Stores raw and summary data for further processing.
 * Currently does NOT download any media or support People & Places.
 
-= TripIt =
+### TripIt 
 * Trips are imported, with flights mapped and posted as Status-format posts.
 * Geo data is stored using something resembling the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata).
 * Posts are tagged using airport codes and city names.
 * Now supports paging through the API to avoid timeouts on accounts with lots of trip data.
 
-= Twitter =
+### Twitter 
 * Every [tweet](https://twitter.com/) will be downloaded as an individual Post.
 * Posts are marked with the 'aside' Post Format.
 * If available, geo data is downloaded and stored per the [WordPress Geodata guidelines](http://codex.wordpress.org/Geodata).
@@ -134,19 +139,19 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * If your tweet contains #hashtags, they are applied as tags within WordPress.
 * "Entities" are expanded (URLs are not t.co, they are the real/final URLs).
 
-== Changelog ==
+## Changelog
 
-=  = 
+### Pending release
 * NEW: Allow use of the #keyringprivate tag on most services to set the created post to Private. Props @johnHackworth for the idea and initial implementation.
 * NEW: Download media from carousels (multiple images or videos) from Instagram. Currently just embedded as a series of media items in the created post.
 * Enhancement: Improved the microcopy for airport codes if using People & Places.
 * Bugfix: Sideloading videos wasn't working if they had querystrings (e.g. all Instagram videos). Now we strip them to get the extension properly, and make sure that the URLs are embedded in posts properly.
 
-= 2.0 =
+### 2.0 
  * NEW: Add a Pocket importer, props @roccotripaldi.
  * Change: Updated readme.txt to include contributors.
 
-= 1.9 =
+### 1.9 
 * NEW: Added a Strava importer. Kudos @mdrovdahl. Props @marekhrabe for additional contributions.
 * NEW: Introduce a new global option to set the status of posts created via import. Set to "Pending" or "Draft" to hold them for publication. Set to "Private" to keep for your own records, or "Publish" to publish automatically (previous and current default).
 * Enhancement: Handle Swarm checkins created by someone else by associating that person (via People & Places). Includes a reprocessor to handle old posts.
@@ -161,19 +166,19 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Bugfix: Shortened URLs are expanded correctly for Twitter now. Props @chrishardie.
 * Bugfix: Updated Instagram to use max/min_id rather than timestamps for looping through media.
 
-= 1.8 =
+### 1.8 
 * NEW: Added a Jetpack/WordPress.com importer.
 * Enhancement: Fix Twitter importer so that it correctly obeys the option to import retweets. Props @glueckpress for reporting.
 * Enhancement: Lots of code cleanup/linting.
 
-= 1.7 =
+### 1.7 
 * Enhancement: Places support for Nest and TripIt importers.
 * Enhancement: Instagram importer now supports Video posts, and People.
 * Enhancement: REST API support.
 * Enhancement: New filter for disabling Instapaper remote content download.
 * Enhancement: New filter for injecting custom CSS into the header of an importer.
 
-= 1.6 =
+### 1.6 
 * NOTE: Update to Keyring 1.7 for full compatibility.
 * NEW: Added "Reprocessor" concept (accessible via Tools > Import > Reprocess Keyring Data) to allow developers to re-use the raw import data for posts, and update/reprocess information.
 * NEW: Nest Camera importer.
@@ -186,7 +191,7 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Enhancement: Add a new filter to the default header (`keyring_importer_header_css`) so that you can easily inject some custom CSS, without completely recreating the header.
 * Bugfix: Remove a bunch of unused global variables.
 
-= 1.5 =
+### 1.5 
 * NOTE: Update Keyring to 1.6.2 for best results
 * Bugfix: Discovered a problem with the way "raw" import data was being encoded and stored (as JSON), which rendered it (sometimes) un-encodeable. Changed to use `wp_slash()` before storing it, which means all future data is "clean". Working on a script to recover as much as possible, or you can delete old posts and re-import them, and their import data will be stored using the new approach, and thus be more accessible.
 * Enhancement: New Fitbit Importer (very basic currently)
@@ -201,20 +206,20 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Bugfix: Use user-id in URLs for Flickr (more reliable)
 * Bugfix: Auto-import Instagram photos using timestamps instead of ids, which is more reliable
 
-= 1.4 =
+### 1.4 
 * BREAKING: Change from using a value in post meta (keyring_service) to using a custom taxonomy ('keyring_services') to reference the service a post was imported from. Entries are automatically created for all importers.
 * There is a script called 'migrate-keyring-postmeta-to-taxonomy.php' included in the plugin. Put it in the root of your WP install and run it (as many times as necessary, even if it crashes/runs out of memory) until it produces no output. That will convert all existing posts and remove their keyring_service postmeta.
 * Fix deprecated notice and use esc_sql()
 * Fix a string that didn't havea a textdomain
 * Tweak Instapaper importer to use last progress date to get links published closer to when you read them
 
-= 1.3 =
+### 1.3 
 * Update Twitter API URLs to use new 1.1 API
 * Foursquare check-ins that contain photos now download and attach the photo to your local post, props Chris Finke
 * Added an action which is fired after *each post* is created/imported: do_action( 'keyring_post_imported', $post_id, $service_name, $post );
 * Add import_start/end actions which are called in core importers (for consistency)
 
-= 1.2 =
+### 1.2 
 * NOTE: Requires the latest version of Keyring (v1.4)
 * NEW: Instapaper importer
 * NEW: TripIt importer
@@ -224,11 +229,11 @@ You can potentially [write your own importers](https://github.com/cfinke/Keyring
 * Allow default tags to be applied to all imported posts
 * Clean up help text and instructions on a few importers
 
-= 1.1 =
+### 1.1 
 * Updated to work with Keyring 1.2
 * Added TripIt importer (for air travel only, 1 post per "flight series")
 * Added "Default tags" option for all importers
 
-= 1.0 =
+### 1.0 
 * Initial check-in without templating engine
 * Auto-import working for all services **except** Flickr, and maybe Instagram
