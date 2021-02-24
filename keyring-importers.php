@@ -47,7 +47,7 @@ abstract class Keyring_Importer_Base {
 	const SLUG              = '';    // e.g. 'twitter' (should match a service in Keyring)
 	const LABEL             = '';    // e.g. 'Twitter'
 	const KEYRING_SERVICE   = '';    // Full class name of the Keyring_Service this importer requires
-	const REQUESTS_PER_LOAD = 3;     // How many remote requests should be made before reloading the page?
+	const REQUESTS_PER_LOAD = 1;     // How many remote requests should be made before reloading the page?
 	const KEYRING_VERSION   = '1.4'; // Minimum version of Keyring required
 
 	// You shouldn't need to edit (or override) these ones
@@ -597,7 +597,7 @@ abstract class Keyring_Importer_Base {
 		<script type="text/javascript" charset="utf-8">
 			jQuery( document ).ready( function() {
 				jQuery( '#auto_import' ).on( 'change', function() {
-					if ( jQuery( this ).attr( 'checked' ) ) {
+					if ( jQuery( this ).prop( 'checked' ) ) {
 						jQuery( '#options-submit' ).val( '<?php echo esc_js( $auto_import_button_label ); ?>' );
 					} else {
 						jQuery( '#options-submit' ).val( '<?php echo esc_js( __( 'Import all posts (once-off)', 'keyring' ) ); ?>' );
