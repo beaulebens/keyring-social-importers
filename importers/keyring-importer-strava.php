@@ -14,10 +14,10 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 	const KEYRING_SERVICE   = 'Keyring_Service_Strava';    // Full class name of the Keyring_Service this importer requires.
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
 	const NUM_PER_LOAD      = 30; // How many activities per API request? We'll use Strava's default of 30.
-	
+
 	function __construct() {
 		parent::__construct();
-		
+
 		// Fix problem with polyline escaping in postmeta
 		add_filter( 'keyring_importer_reprocessors', function( $reprocessors ) {
 			$reprocessors[ 'strava-geo-polyline' ] = array(
@@ -122,7 +122,7 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 	/**
 	 * Helper function to format seconds to minutes and hours
 	 * Anything less than 1 hour is shown in minutes, otherwise hours + minutes
-     * 
+     *
 	 * @param number $num is a time value in seconds
 	 */
 	function format_duration( $num ) {
@@ -246,7 +246,6 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 			$post_author = $this->get_option( 'author' );
 
 			// Set post status from import options, default to published unless set to private on Strava.
-			// @todo Currently this won't work because you need a token with scope=activity:read_all to get private activities. Will need to modify or filter the Strava Service file for that.
 			$private = $post->private;
 			$post_status = $this->get_option( 'status', 'publish' );
 			if ( $private ) {
@@ -375,11 +374,11 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 		if ( ! empty( $raw->map ) && ! empty( $raw->map->summary_polyline ) ) {
 			$geo = $raw->map->summary_polyline;
 		}
-		
+
 		if ( empty( $geo ) ) {
 			return Keyring_Importer_Reprocessor::PROCESS_SKIPPED;
 		}
-		
+
 		update_post_meta( $post->ID, 'geo_polyline_encoded', wp_slash( $geo ) );
 
 		return Keyring_Importer_Reprocessor::PROCESS_SUCCESS;
