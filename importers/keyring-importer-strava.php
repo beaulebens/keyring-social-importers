@@ -35,6 +35,10 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 	 */
 	function handle_request_options() {
 		// Validate options and store them so they can be used in auto-imports.
+		if ( empty( $_POST['status'] ) || ! in_array( $_POST['status'], array( 'publish', 'pending', 'draft', 'private' ) ) ) {
+			$this->error( __( "Make sure you select a valid post status to assign to your imported posts.", 'keyring' ) );
+		}
+
 		if ( empty( $_POST['category'] ) || ! ctype_digit( $_POST['category'] ) ) {
 			$this->error( __( 'Make sure you select a valid category to import your activities into.', 'keyring' ) );
 		}
@@ -54,6 +58,7 @@ class Keyring_Strava_Importer extends Keyring_Importer_Base {
 			$this->step = 'options';
 		} else {
 			$this->set_option( array(
+				'status'      => (string) $_POST['status'],
 				'category'    => (int) $_POST['category'],
 				'tags'        => explode( ',', $_POST['tags'] ),
 				'author'      => (int) $_POST['author'],
