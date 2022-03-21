@@ -521,7 +521,7 @@ abstract class Keyring_Importer_Base {
 					<td>
 						<select name="category" id="category">
 						<?php
-							$prev_cat = $this->get_option( 'category' );
+							$prev_cat = $this->get_option( 'category', get_option( 'default_category' ) );
 							$categories = get_categories( array( 'hide_empty' => 0 ) );
 							foreach ( $categories as $cat ) {
 								printf( '<option value="%s"' . selected( $prev_cat == $cat->term_id ) . '>%s</option>', $cat->term_id, $cat->name );
