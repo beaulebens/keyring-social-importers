@@ -2,7 +2,7 @@
 Contributors: beaulebens, cfinke, chrishardie, marekhrabe, mdrovdahl, roccotripaldi
 Tags: import, sync, social, keyring, indieweb, foursquare, instagram, instapaper, tripit, twitter, pinterest
 Requires at least: 4.0
-Tested up to: 5.2.1
+Tested up to: 6.1
 Stable Tag: 2.0
 
 Import your posts/images/etc from Twitter, Instagram, Strava, and more, into your WordPress install. Own your content.
