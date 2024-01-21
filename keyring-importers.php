@@ -167,14 +167,9 @@ abstract class Keyring_Importer_Base {
 	/**
 	 * Create an instance of this importer. Only ever create one.
 	 */
-	static function &init() {
-		static $instance = false;
-
-		if ( ! $instance ) {
-			$class = get_called_class();
-			$instance = new $class;
-		}
-
+	static function init() {
+		$class = get_called_class();
+		$instance = new $class;
 		return $instance;
 	}
 
