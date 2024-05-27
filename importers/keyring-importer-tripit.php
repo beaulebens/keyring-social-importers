@@ -122,12 +122,11 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 
 			$prev_end = 0;
 			$post_title = '';
+			// TripIt returns a single-segment trip as an object, ugh!
+			if ( is_object( $trip->Segment ) ) {
+				$trip->Segment = array( $trip->Segment );
+			}
 			for ( $s = 0; $s < count( $trip->Segment ); $s++ ) {
-				// TripIt returns a single-segment trip as an object, ugh!
-				if ( is_object( $trip->Segment ) ) {
-					$trip->Segment = array( $trip->Segment );
-				}
-
 				$segment = $trip->Segment[$s];
 				$this_post = array();
 
