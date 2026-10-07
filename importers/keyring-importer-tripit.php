@@ -100,9 +100,14 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 		}
 
 		// Make sure we have some trips to parse
-		if ( ! is_object( $importdata ) || ! count( $importdata->AirObject ) ) {
+		if ( ! is_object( $importdata ) || empty( $importdata->AirObject ) ) {
 			$this->finished = true;
 			return;
+		}
+
+		// TripIt returns a single trip as an object, ugh!
+		if ( is_object( $importdata->AirObject ) ) {
+			$importdata->AirObject = array( $importdata->AirObject );
 		}
 
 		// Keep track of the maximum number of pages worth of results available
@@ -120,14 +125,14 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				continue;
 			}
 
+			// TripIt returns a single-segment trip as an object, ugh!
+			if ( is_object( $trip->Segment ) ) {
+				$trip->Segment = array( $trip->Segment );
+			}
+
 			$prev_end = 0;
 			$post_title = '';
 			for ( $s = 0; $s < count( $trip->Segment ); $s++ ) {
-				// TripIt returns a single-segment trip as an object, ugh!
-				if ( is_object( $trip->Segment ) ) {
-					$trip->Segment = array( $trip->Segment );
-				}
-
 				$segment = $trip->Segment[$s];
 				$this_post = array();
 
