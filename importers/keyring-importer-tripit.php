@@ -115,20 +115,61 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 			$this->set_option( 'max_page', $importdata->max_page );
 		}
 
-		// Parse/convert everything to WP post structs
-		foreach ( $importdata->AirObject as $trip ) {
-			// We are likely to create at least 2 (there and back) posts per trip
-			$trip_posts = array();
-
+		// Group reservations (AirObjects) by TripIt trip, so that separately-booked
+		// connecting flights (e.g. PGA:PHX + PHX:DEN) can be combined into one post.
+		// Reservations for the same trip that straddle a page boundary won't be combined.
+		$trips = array();
+		foreach ( $importdata->AirObject as $air ) {
 			// Each trip is made up of a series of segments, some of which are compiled into single posts
-			if ( ! is_object( $trip ) || ! property_exists( $trip, 'Segment' ) ) {
+			if ( ! is_object( $air ) || ! property_exists( $air, 'Segment' ) ) {
 				continue;
 			}
 
 			// TripIt returns a single-segment trip as an object, ugh!
-			if ( is_object( $trip->Segment ) ) {
-				$trip->Segment = array( $trip->Segment );
+			if ( is_object( $air->Segment ) ) {
+				$air->Segment = array( $air->Segment );
 			}
+
+			$key = ! empty( $air->trip_id ) ? $air->trip_id : 'air-' . $air->id;
+			if ( ! isset( $trips[ $key ] ) ) {
+				$trips[ $key ] = $air;
+				continue;
+			}
+
+			// The same flight can appear in more than one reservation (e.g. a confirmation
+			// forwarded twice), so only add segments we haven't already seen for this trip
+			foreach ( $air->Segment as $segment ) {
+				$is_dupe = false;
+				foreach ( $trips[ $key ]->Segment as $existing ) {
+					if (
+						$existing->start_airport_code === $segment->start_airport_code
+					&&
+						$existing->end_airport_code === $segment->end_airport_code
+					&&
+						$existing->StartDateTime->date === $segment->StartDateTime->date
+					&&
+						$existing->StartDateTime->time === $segment->StartDateTime->time
+					) {
+						$is_dupe = true;
+						break;
+					}
+				}
+				if ( ! $is_dupe ) {
+					$trips[ $key ]->Segment[] = $segment;
+				}
+			}
+		}
+
+		// Parse/convert everything to WP post structs
+		foreach ( $trips as $trip ) {
+			// We are likely to create at least 2 (there and back) posts per trip
+			$trip_posts = array();
+
+			// Segments from separate reservations need to be in flight order
+			usort( $trip->Segment, function ( $a, $b ) {
+				return strtotime( $a->StartDateTime->date . 'T' . $a->StartDateTime->time . $a->StartDateTime->utc_offset )
+					- strtotime( $b->StartDateTime->date . 'T' . $b->StartDateTime->time . $b->StartDateTime->utc_offset );
+			} );
 
 			$prev_end = 0;
 			$post_title = '';
@@ -141,9 +182,13 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				$end_time   = strtotime( $segment->EndDateTime->date . 'T' . $segment->EndDateTime->time . $segment->EndDateTime->utc_offset );
 
 				// If a segment occurs more than 24 hours after the previous
-				// one, then we create a new post for it
+				// one, or doesn't connect from it, then we create a new post for it
 				$new_post = false;
-				if ( $start_time > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) ) {
+				if (
+					$start_time > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 )
+				||
+					( $s > 0 && $segment->start_airport_code !== $trip->Segment[ $s - 1 ]->end_airport_code )
+				) {
 					$new_post = true;
 				}
 
@@ -256,7 +301,11 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 					$write_out_post = true;
 				} else {
 					$next_start = strtotime( $trip->Segment[ $s + 1 ]->StartDateTime->date . 'T' . $trip->Segment[ $s + 1 ]->StartDateTime->time . $trip->Segment[ $s + 1 ]->StartDateTime->utc_offset );
-					if ( $next_start > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 ) ) {
+					if (
+						$next_start > $prev_end + ( self::MIN_HOURS_GAP * 60 * 60 )
+					||
+						$trip->Segment[ $s + 1 ]->start_airport_code !== $segment->end_airport_code
+					) {
 						$write_out_post = true;
 					}
 				}
@@ -337,6 +386,7 @@ class Keyring_TripIt_Importer extends Keyring_Importer_Base {
 				}
 
 				add_post_meta( $post_id, 'tripit_id', $tripit_id );
+				add_post_meta( $post_id, 'tripit_segment_id', $tripit_segment_id );
 
 				// Store geodata if it's available
 				if ( ! empty( $geo_polyline ) ) {
