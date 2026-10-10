@@ -815,16 +815,19 @@ abstract class Keyring_Importer_Base {
 		while ( ! $this->finished && $num < static::REQUESTS_PER_LOAD ) {
 			$data = $this->make_request();
 			if ( Keyring_Util::is_error( $data ) ) {
+				error_log( 'Keyring ' . static::SLUG . ' auto-import failed (request): ' . substr( print_r( $data->get_error_message(), true ), 0, 500 ) );
 				return;
 			}
 
 			$result = $this->extract_posts_from_data( $data );
 			if ( Keyring_Util::is_error( $result ) ) {
+				error_log( 'Keyring ' . static::SLUG . ' auto-import failed (extract): ' . substr( print_r( $result->get_error_message(), true ), 0, 500 ) );
 				return;
 			}
 
 			$result = $this->insert_posts();
 			if ( Keyring_Util::is_error( $result ) ) {
+				error_log( 'Keyring ' . static::SLUG . ' auto-import failed (insert): ' . substr( print_r( $result->get_error_message(), true ), 0, 500 ) );
 				return;
 			}
 

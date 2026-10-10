@@ -11,7 +11,7 @@ class Keyring_Instapaper_Importer extends Keyring_Importer_Base {
 	const LABEL             = 'Instapaper'; // e.g. 'Twitter'
 	const KEYRING_SERVICE   = 'Keyring_Service_Instapaper'; // Full class name of the Keyring_Service this importer requires
 	const REQUESTS_PER_LOAD = 1; // How many remote requests should be made before reloading the page?
-	const LINKS_PER_REQUEST = 25; // How many links to request from Instapaper in each request
+	const LINKS_PER_REQUEST = 100; // How many links to request from Instapaper in each request
 
 	function __construct() {
 		parent::__construct();
